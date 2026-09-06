@@ -1,0 +1,20 @@
+{
+  "name": "nfs-qr",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm --filter @nfs/web dev",
+    "build": "pnpm --filter @nfs/domain build && pnpm --filter @nfs/application build && pnpm --filter @nfs/infrastructure build && pnpm --filter @nfs/web build",
+    "test": "pnpm --filter @nfs/domain test && pnpm --filter @nfs/application test",
+    "lint": "pnpm -r lint --if-present",
+    "db:generate": "pnpm --filter @nfs/infrastructure db:generate",
+    "db:migrate": "pnpm --filter @nfs/infrastructure db:migrate",
+    "db:seed": "pnpm --filter @nfs/infrastructure db:seed",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
