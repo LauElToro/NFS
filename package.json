@@ -1,0 +1,15 @@
+{
+  "name": "nfs-qr",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm --filter @nfs/web dev",
+    "redirects": "node scripts/generate-redirects.mjs",
+    "build": "node scripts/generate-redirects.mjs && pnpm --filter @nfs/domain build && pnpm --filter @nfs/application build && pnpm --filter @nfs/infrastructure build && pnpm --filter @nfs/web build",
+    "test": "pnpm --filter @nfs/domain test && pnpm --filter @nfs/application test",
+    "lint": "pnpm -r lint --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "qr-menu-terraza",
+    "ownerId": "user-luca",
+    "slug": "menu-terraza",
+    "title": "Menú terraza",
+    "destinationUrl": "https://example.com/menu-terraza",
+    "isActive": true,
+    "campaignLabel": "Menú terraza",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "qr-promo-2x1",
+    "ownerId": "user-luca",
+    "slug": "promo-2x1",
+    "title": "Promo 2x1",
+    "destinationUrl": "https://example.com/promo-2x1",
+    "isActive": true,
+    "campaignLabel": "Promo 2x1",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "qr-carta-delivery",
+    "ownerId": "user-luca",
+    "slug": "carta-delivery",
+    "title": "Carta delivery",
+    "destinationUrl": "https://example.com/delivery",
+    "isActive": true,
+    "campaignLabel": "Delivery",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  }
+]
