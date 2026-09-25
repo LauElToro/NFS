@@ -6,7 +6,7 @@ export default function LoginPage() {
   return (
     <main className="container" style={{ padding: "4rem 0", maxWidth: 480 }}>
       <h1>Entrar</h1>
-      <p className="muted">Demo: Luca-QRS@NFS.com / Luca123!</p>
+      <p className="muted">Cuenta: admin@nfs.com / GCTlK6BuVhAD1wdx</p>
       <AuthForm action={loginAction} submitLabel="Entrar" />
       <p className="muted">
         ¿No tenés cuenta? <Link href="/register">Registrate</Link>

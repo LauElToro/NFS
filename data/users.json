@@ -4,5 +4,11 @@
     "email": "luca-qrs@nfs.com",
     "passwordHash": "$2b$10$VEUlcDaV509gzQHbFg/EV..dxgm5PC.wMCtBjcxDxKqQ358s0NvqS",
     "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "user-admin",
+    "email": "admin@nfs.com",
+    "passwordHash": "$2b$10$7ePF3RU/ZoKEt28TXnRGoexje1hRC5CYAq6x95K3RJQPblqfCG85a",
+    "createdAt": "2026-09-25T03:12:00.000Z"
   }
 ]

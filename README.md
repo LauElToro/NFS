@@ -6,7 +6,7 @@ QRs en `data/qrs.json`. El dominio de Netlify redirige `/r/<slug>` al destino de
 
 Editá `data/qrs.json` (`title` y `url`) y volvé a desplegar. El build genera `apps/web/public/_redirects`: `/r/<titulo-en-slug>` responde 302 hacia esa URL.
 
-Demo: `luca-qrs@nfs.com` / `Luca123!`
+Cuenta: `admin@nfs.com` / `GCTlK6BuVhAD1wdx`
 
 ## Local
 
