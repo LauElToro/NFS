@@ -18,32 +18,42 @@ import {
   type UserRecord,
 } from "./json-store.js";
 
+const OWNER_ID = "user-luca";
+const STABLE_DATE = new Date("2026-01-01T00:00:00.000Z");
+
+export function slugFromTitle(title: string): string {
+  return (
+    title
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 48) || "qr"
+  );
+}
+
 function toQr(row: QrRecord): QrCode {
+  const slug = slugFromTitle(row.title);
   return QrCode.rehydrate({
-    id: row.id,
-    ownerId: row.ownerId,
-    slug: row.slug,
+    id: slug,
+    ownerId: OWNER_ID,
+    slug,
     title: row.title,
-    destinationUrl: row.destinationUrl,
-    isActive: row.isActive,
-    campaign: { label: row.campaignLabel },
-    createdAt: new Date(row.createdAt),
-    updatedAt: new Date(row.updatedAt),
+    destinationUrl: row.url,
+    isActive: true,
+    campaign: { label: null },
+    createdAt: STABLE_DATE,
+    updatedAt: STABLE_DATE,
   });
 }
 
-function toRecord(qr: QrCode): QrRecord {
+function toRecord(qr: QrCode): QrRecord | null {
   const p = qr.toProps();
+  if (!p.isActive) return null;
   return {
-    id: p.id,
-    ownerId: p.ownerId,
-    slug: p.slug,
     title: p.title,
-    destinationUrl: p.destinationUrl,
-    isActive: p.isActive,
-    campaignLabel: p.campaign.label,
-    createdAt: p.createdAt.toISOString(),
-    updatedAt: p.updatedAt.toISOString(),
+    url: p.destinationUrl,
   };
 }
 
@@ -56,35 +66,33 @@ function toScan(row: ScanRecord): ScanEvent {
 
 export class JsonQrCodeRepository implements QrCodeRepository {
   async findById(id: string) {
-    const row = readQrs().find((qr) => qr.id === id);
+    const row = readQrs().find((qr) => slugFromTitle(qr.title) === id);
     return row ? toQr(row) : null;
   }
 
   async findBySlug(slug: string) {
-    const row = readQrs().find((qr) => qr.slug === slug);
+    const row = readQrs().find((qr) => slugFromTitle(qr.title) === slug);
     return row ? toQr(row) : null;
   }
 
-  async listByOwner(ownerId: string) {
-    return readQrs()
-      .filter((qr) => qr.ownerId === ownerId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .map(toQr);
+  async listByOwner() {
+    return readQrs().map(toQr);
   }
 
-  async countByOwner(ownerId: string) {
-    return readQrs().filter((qr) => qr.ownerId === ownerId).length;
+  async countByOwner() {
+    return readQrs().length;
   }
 
   async save(qr: QrCode) {
     const next = toRecord(qr);
-    const rows = readQrs().filter((row) => row.id !== next.id && row.slug !== next.slug);
-    rows.push(next);
+    const slug = qr.slug;
+    const rows = readQrs().filter((row) => slugFromTitle(row.title) !== slug);
+    if (next) rows.push(next);
     writeQrs(rows);
   }
 
   async delete(id: string) {
-    writeQrs(readQrs().filter((qr) => qr.id !== id));
+    writeQrs(readQrs().filter((qr) => slugFromTitle(qr.title) !== id));
   }
 }
 
@@ -108,7 +116,11 @@ export class JsonScanEventRepository implements ScanEventRepository {
   }
 
   async listByOwner(ownerId: string, from?: Date) {
-    const ids = new Set(readQrs().filter((qr) => qr.ownerId === ownerId).map((qr) => qr.id));
+    const ids = new Set(
+      readQrs()
+        .filter(() => ownerId === OWNER_ID)
+        .map((qr) => slugFromTitle(qr.title)),
+    );
     return readScans()
       .filter((row) => ids.has(row.qrCodeId) && (!from || row.scannedAt >= from.toISOString()))
       .sort((a, b) => b.scannedAt.localeCompare(a.scannedAt))

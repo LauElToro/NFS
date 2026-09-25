@@ -2,15 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 export interface QrRecord {
-  id: string;
-  ownerId: string;
-  slug: string;
   title: string;
-  destinationUrl: string;
-  isActive: boolean;
-  campaignLabel: string | null;
-  createdAt: string;
-  updatedAt: string;
+  url: string;
 }
 
 export interface UserRecord {
