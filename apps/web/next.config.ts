@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@nfs/domain", "@nfs/application", "@nfs/infrastructure"],
-  serverExternalPackages: ["bcryptjs", "qrcode"],
+  serverExternalPackages: ["bcryptjs", "qrcode", "@netlify/blobs"],
   outputFileTracingRoot: path.join(__dirname, "../.."),
   outputFileTracingIncludes: {
     "/**": ["../../data/**/*"],

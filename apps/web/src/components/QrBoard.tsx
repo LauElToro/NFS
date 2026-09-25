@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { loadQrs, saveQrs, slugFromTitle, type QrItem } from "@/lib/qr-store";
+import { slugFromTitle, type QrItem } from "@/lib/qr-store";
+
+function isHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 async function downloadPng(item: QrItem) {
   const dataUrl = await QRCode.toDataURL(`${window.location.origin}/r/${item.id}`, {
@@ -21,15 +30,34 @@ export function QrBoard() {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const itemsRef = useRef<QrItem[]>([]);
 
   useEffect(() => {
-    setItems(loadQrs());
-    setReady(true);
+    fetch("/api/qrs")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data: QrItem[]) => remember(data))
+      .catch(() => setError("No se pudieron cargar los QR"))
+      .finally(() => setReady(true));
   }, []);
 
-  function update(next: QrItem[]) {
+  function remember(next: QrItem[]) {
+    itemsRef.current = next;
     setItems(next);
-    saveQrs(next);
+  }
+
+  function edit(id: string, patch: Partial<QrItem>) {
+    remember(itemsRef.current.map((qr) => (qr.id === id ? { ...qr, ...patch } : qr)));
+  }
+
+  async function persist(next: QrItem[]) {
+    if (next.some((item) => !item.title.trim() || !isHttpUrl(item.url))) return;
+    const res = await fetch("/api/qrs", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(next),
+    });
+    if (!res.ok) setError("No se pudo guardar el cambio");
+    else setError(null);
   }
 
   if (!ready) return null;
@@ -38,8 +66,8 @@ export function QrBoard() {
     <div className="stack" style={{ gap: "1.5rem" }}>
       <div>
         <h1 style={{ margin: "0 0 0.35rem" }}>Tus QRs</h1>
-        <p className="muted" style={{ margin: 0 }}>
-          El código apunta a /r/… y el destino se puede cambiar sin reimprimir.
+          <p className="muted" style={{ margin: 0 }}>
+          El QR impreso sigue en /r/… Al cambiar la URL, esa redirección cambia para todos.
         </p>
       </div>
 
@@ -64,7 +92,9 @@ export function QrBoard() {
             id = `${base}-${n}`;
           }
           setError(null);
-          update([{ id, title: nextTitle, url: nextUrl }, ...items]);
+          const next = [{ id, title: nextTitle, url: nextUrl }, ...itemsRef.current];
+          remember(next);
+          persist(next);
           setTitle("");
           setUrl("");
         }}
@@ -114,9 +144,8 @@ export function QrBoard() {
               <input
                 className="input"
                 value={item.title}
-                onChange={(e) =>
-                  update(items.map((qr) => (qr.id === item.id ? { ...qr, title: e.target.value } : qr)))
-                }
+                onChange={(e) => edit(item.id, { title: e.target.value })}
+                onBlur={() => persist(itemsRef.current)}
               />
             </label>
             <label className="label">
@@ -125,9 +154,8 @@ export function QrBoard() {
                 className="input"
                 type="url"
                 value={item.url}
-                onChange={(e) =>
-                  update(items.map((qr) => (qr.id === item.id ? { ...qr, url: e.target.value } : qr)))
-                }
+                onChange={(e) => edit(item.id, { url: e.target.value })}
+                onBlur={() => persist(itemsRef.current)}
               />
             </label>
             <p className="muted" style={{ margin: 0 }}>
@@ -142,7 +170,9 @@ export function QrBoard() {
                 type="button"
                 onClick={() => {
                   if (!window.confirm(`¿Seguro que querés eliminar «${item.title || item.id}»?`)) return;
-                  update(items.filter((qr) => qr.id !== item.id));
+                  const next = itemsRef.current.filter((qr) => qr.id !== item.id);
+                  remember(next);
+                  persist(next);
                 }}
               >
                 Eliminar

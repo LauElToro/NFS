@@ -11,6 +11,7 @@
   "dependencies": {
     "@nfs/application": "workspace:*",
     "@nfs/domain": "workspace:*",
+    "@netlify/blobs": "^8.2.0",
     "@nfs/infrastructure": "workspace:*",
     "jose": "^5.9.6",
     "next": "^15.1.3",
