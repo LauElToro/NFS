@@ -1,3 +1,1 @@
-# Generado desde data/qrs.json. No editar a mano.
-/r/menu-terraza  https://example.com/menu-terraza  302
-/r/carta-delivery  https://example.com/delivery  302
+# Los destinos de QR se resuelven en /r/:slug desde el navegador.

@@ -1,54 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import catalog from "../../../../data/qrs.json";
-
-type QrItem = { title: string; url: string; published: boolean };
-
-function slugFromTitle(title: string): string {
-  return (
-    title
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 48) || "qr"
-  );
-}
-
-function qrText(item: QrItem): string {
-  if (!item.published) return item.url;
-  const origin = window.location.origin;
-  return `${origin}/r/${slugFromTitle(item.title)}`;
-}
+import { loadQrs, saveQrs, slugFromTitle, type QrItem } from "@/lib/qr-store";
 
 async function downloadPng(item: QrItem) {
-  const dataUrl = await QRCode.toDataURL(qrText(item), { width: 512, margin: 2 });
+  const dataUrl = await QRCode.toDataURL(`${window.location.origin}/r/${item.id}`, {
+    width: 512,
+    margin: 2,
+  });
   const a = document.createElement("a");
   a.href = dataUrl;
-  a.download = `qr-${slugFromTitle(item.title)}.png`;
+  a.download = `qr-${item.id}.png`;
   a.click();
 }
 
-const initial: QrItem[] = (catalog as { title: string; url: string }[]).map((qr) => ({
-  ...qr,
-  published: true,
-}));
-
 export function QrBoard() {
-  const [items, setItems] = useState<QrItem[]>(initial);
+  const [items, setItems] = useState<QrItem[]>([]);
+  const [ready, setReady] = useState(false);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setItems(loadQrs());
+    setReady(true);
+  }, []);
+
+  function update(next: QrItem[]) {
+    setItems(next);
+    saveQrs(next);
+  }
+
+  if (!ready) return null;
 
   return (
     <div className="stack" style={{ gap: "1.5rem" }}>
       <div>
         <h1 style={{ margin: "0 0 0.35rem" }}>Tus QRs</h1>
         <p className="muted" style={{ margin: 0 }}>
-          El PNG se genera en el navegador.
+          El código apunta a /r/… y el destino se puede cambiar sin reimprimir.
         </p>
       </div>
 
@@ -65,8 +56,15 @@ export function QrBoard() {
             setError("La URL no es válida");
             return;
           }
+          const base = slugFromTitle(nextTitle);
+          let id = base;
+          let n = 1;
+          while (items.some((qr) => qr.id === id)) {
+            n += 1;
+            id = `${base}-${n}`;
+          }
           setError(null);
-          setItems((prev) => [{ title: nextTitle, url: nextUrl, published: false }, ...prev]);
+          update([{ id, title: nextTitle, url: nextUrl }, ...items]);
           setTitle("");
           setUrl("");
         }}
@@ -108,32 +106,50 @@ export function QrBoard() {
       </form>
 
       <div className="stack">
-        {items.map((item) => {
-          const slug = slugFromTitle(item.title);
-          return (
-            <div
-              key={`${slug}-${item.url}`}
-              className="card-panel"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                gap: "1rem",
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <h3 style={{ margin: "0 0 0.35rem" }}>{item.title}</h3>
-                <p style={{ margin: 0, fontSize: "0.95rem" }}>{item.url}</p>
-                <p className="muted" style={{ margin: "0.35rem 0 0" }}>
-                  {item.published ? `Redirige por /r/${slug}` : "QR directo a la URL"}
-                </p>
-              </div>
+        {items.length === 0 ? <p className="muted">Todavía no hay QRs.</p> : null}
+        {items.map((item) => (
+          <div key={item.id} className="card-panel stack">
+            <label className="label">
+              Título
+              <input
+                className="input"
+                value={item.title}
+                onChange={(e) =>
+                  update(items.map((qr) => (qr.id === item.id ? { ...qr, title: e.target.value } : qr)))
+                }
+              />
+            </label>
+            <label className="label">
+              URL
+              <input
+                className="input"
+                type="url"
+                value={item.url}
+                onChange={(e) =>
+                  update(items.map((qr) => (qr.id === item.id ? { ...qr, url: e.target.value } : qr)))
+                }
+              />
+            </label>
+            <p className="muted" style={{ margin: 0 }}>
+              /r/{item.id}
+            </p>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               <button className="btn" type="button" onClick={() => downloadPng(item)}>
                 Descargar PNG
               </button>
+              <button
+                className="btn secondary"
+                type="button"
+                onClick={() => {
+                  if (!window.confirm(`¿Seguro que querés eliminar «${item.title || item.id}»?`)) return;
+                  update(items.filter((qr) => qr.id !== item.id));
+                }}
+              >
+                Eliminar
+              </button>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );
