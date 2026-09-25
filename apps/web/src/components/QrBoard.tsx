@@ -13,6 +13,32 @@ function isHttpUrl(value: string) {
   }
 }
 
+function QrPreview({ id }: { id: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    QRCode.toDataURL(`${window.location.origin}/r/${id}`, { width: 220, margin: 1 }).then((url) => {
+      if (!cancelled) setSrc(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (!src) return null;
+
+  return (
+    <img
+      src={src}
+      alt={`Vista previa del QR ${id}`}
+      width={180}
+      height={180}
+      style={{ background: "#fff", borderRadius: 12, padding: 8 }}
+    />
+  );
+}
+
 async function downloadPng(item: QrItem) {
   const dataUrl = await QRCode.toDataURL(`${window.location.origin}/r/${item.id}`, {
     width: 512,
@@ -138,7 +164,9 @@ export function QrBoard() {
       <div className="stack">
         {items.length === 0 ? <p className="muted">Todavía no hay QRs.</p> : null}
         {items.map((item) => (
-          <div key={item.id} className="card-panel stack">
+          <div key={item.id} className="card-panel" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "flex-start" }}>
+            <QrPreview id={item.id} />
+            <div className="stack" style={{ flex: "1 1 240px" }}>
             <label className="label">
               Título
               <input
@@ -162,6 +190,9 @@ export function QrBoard() {
               /r/{item.id}
             </p>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <a className="btn secondary" href={`/r/${item.id}`} target="_blank" rel="noreferrer">
+                Probar
+              </a>
               <button className="btn" type="button" onClick={() => downloadPng(item)}>
                 Descargar PNG
               </button>
@@ -177,6 +208,7 @@ export function QrBoard() {
               >
                 Eliminar
               </button>
+            </div>
             </div>
           </div>
         ))}
