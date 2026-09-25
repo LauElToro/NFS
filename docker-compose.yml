@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nfs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nfs
+      POSTGRES_PASSWORD: nfs_secret
+      POSTGRES_DB: nfs_qr
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nfs -d nfs_qr"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nfs-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://nfs:nfs_secret@postgres:5432/nfs_qr?schema=public
+      AUTH_SECRET: local-dev-secret-change-me-32chars-ok
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      RUN_SEED: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
