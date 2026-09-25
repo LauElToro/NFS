@@ -75,11 +75,11 @@ export class JsonQrCodeRepository implements QrCodeRepository {
     return row ? toQr(row) : null;
   }
 
-  async listByOwner() {
+  async listByOwner(_ownerId: string) {
     return readQrs().map(toQr);
   }
 
-  async countByOwner() {
+  async countByOwner(_ownerId: string) {
     return readQrs().length;
   }
 
