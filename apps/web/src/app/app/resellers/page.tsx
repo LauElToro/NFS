@@ -107,7 +107,7 @@ export default function ResellersPage() {
       <div className="card-panel stack">
         <h2 style={{ marginTop: 0 }}>Generar código de pack</h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          {[30, 50, 100].map((amount) => (
+          {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((amount) => (
             <button
               key={amount}
               className="btn secondary"

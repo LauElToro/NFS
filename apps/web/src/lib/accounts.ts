@@ -149,7 +149,9 @@ export async function readPacks(): Promise<PackCode[]> {
 
 export async function createPack(credits: number) {
   const amount = Math.floor(credits);
-  if (![30, 50, 100].includes(amount)) throw new Error("El pack tiene que ser de 30, 50 o 100 créditos");
+  if (![10, 20, 30, 40, 50, 60, 70, 80, 90, 100].includes(amount)) {
+    throw new Error("El pack tiene que ser de 10, 20, 30, 40, 50, 60, 70, 80, 90 o 100 créditos");
+  }
   const chunk = () => randomBytes(3).toString("hex").slice(0, 4).toUpperCase();
   const code = `NFS${amount}-${chunk()}-${chunk()}`;
   const packs = await readPacks();
