@@ -25,11 +25,8 @@ export default async function HomePage() {
             </Link>
           ) : (
             <>
-              <Link className="btn secondary" href="/login">
+              <Link className="btn" href="/login">
                 Entrar
-              </Link>
-              <Link className="btn" href="/register">
-                Crear cuenta
               </Link>
             </>
           )}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
+import { findAccount } from "@/lib/accounts";
 import { getSession } from "@/lib/session";
 
 export default async function AppLayout({
@@ -10,6 +11,8 @@ export default async function AppLayout({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
+  const account = await findAccount(session.id);
+  if (!account || !account.active) redirect("/login");
 
   return (
     <div>
@@ -31,8 +34,9 @@ export default async function AppLayout({
             NFS QR
           </Link>
           <nav style={{ display: "flex", gap: "0.85rem", color: "var(--muted)" }}>
-            <Link href="/app">QRs</Link>
-            <Link href="/app/kpis">KPIs</Link>
+            <Link href="/app">Carteles</Link>
+            {account.role === "admin" ? <Link href="/app/resellers">Revendedores</Link> : null}
+            {account.role === "admin" ? <Link href="/app/kpis">KPIs</Link> : null}
           </nav>
         </div>
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>

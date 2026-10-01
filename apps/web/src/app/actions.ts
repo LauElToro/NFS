@@ -2,6 +2,7 @@
 
 import { DomainError } from "@nfs/domain";
 import { redirect } from "next/navigation";
+import { authenticate } from "@/lib/accounts";
 import { getContainer } from "@/lib/container";
 import { createSession, destroySession, requireSession } from "@/lib/session";
 
@@ -9,29 +10,15 @@ function formString(form: FormData, key: string) {
   return String(form.get(key) ?? "").trim();
 }
 
-export async function registerAction(form: FormData) {
-  try {
-    const user = await getContainer().registerUser.execute({
-      email: formString(form, "email"),
-      password: formString(form, "password"),
-    });
-    await createSession({ id: user.id, email: user.email });
-  } catch (e) {
-    return { error: e instanceof DomainError ? e.message : "No se pudo registrar" };
-  }
-  redirect("/app");
+export async function registerAction(_form: FormData) {
+  return { error: "Las cuentas las crea el administrador" };
 }
 
 export async function loginAction(form: FormData) {
-  try {
-    const user = await getContainer().authenticateUser.execute({
-      email: formString(form, "email"),
-      password: formString(form, "password"),
-    });
-    await createSession({ id: user.id, email: user.email });
-  } catch (e) {
-    return { error: e instanceof DomainError ? e.message : "No se pudo entrar" };
-  }
+  const user = await authenticate(formString(form, "email"), formString(form, "password"));
+  if (!user) return { error: "Credenciales inválidas" };
+  if (!user.active) return { error: "Esta cuenta está desactivada" };
+  await createSession({ id: user.id, email: user.email });
   redirect("/app");
 }
 

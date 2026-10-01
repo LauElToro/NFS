@@ -1,6 +1,28 @@
 import catalog from "../../../../data/qrs.json";
 
-export type QrItem = { id: string; title: string; url: string };
+export type DestinationType = "google" | "instagram" | "whatsapp" | "facebook" | "web" | "otro";
+
+export const DESTINATION_LABELS: Record<DestinationType, string> = {
+  google: "Google Reviews",
+  instagram: "Instagram",
+  whatsapp: "WhatsApp",
+  facebook: "Facebook",
+  web: "Sitio web",
+  otro: "Otro enlace",
+};
+
+export type QrItem = {
+  id: string;
+  title: string;
+  url: string;
+  ownerId?: string;
+  destinationType?: DestinationType;
+  active?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  ownerEmail?: string;
+  ownerName?: string;
+};
 
 const KEY = "nfs-qrs";
 
