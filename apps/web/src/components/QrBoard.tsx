@@ -282,6 +282,27 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
                   <button className="btn secondary" type="button" onClick={() => setOpenId(editing ? null : item.id)}>
                     {editing ? "Cerrar" : "Configurar"}
                   </button>
+                  {admin ? (
+                    <button
+                      className="btn secondary"
+                      type="button"
+                      onClick={async () => {
+                        const label = item.cartelId || code;
+                        if (!window.confirm(`¿Seguro que querés eliminar ${label}? El QR dejará de funcionar.`)) return;
+                        const res = await fetch(`/api/qrs/${item.id}`, { method: "DELETE" });
+                        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+                        if (!res.ok) {
+                          setError(data?.error ?? "No se pudo eliminar");
+                          return;
+                        }
+                        setSelected((current) => current.filter((id) => id !== item.id));
+                        setError(null);
+                        await load();
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  ) : null}
                 </div>
                 {editing ? (
                   <PosterForm item={item} admin={Boolean(admin)} onSave={(body) => patch(item.id, body)} />
