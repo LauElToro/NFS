@@ -88,6 +88,7 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
   }, [ownerId]);
 
   const admin = account?.role === "admin";
+  const available = items.filter((item) => item.status === "disponible");
   const visible = items.filter((item) => {
     const text = `${item.cartelId || ""} ${item.uniqueCode || item.id} ${item.title} ${item.ownerName || ""}`.toLowerCase();
     if (query.trim() && !text.includes(query.trim().toLowerCase())) return false;
@@ -170,9 +171,32 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
               ))}
             </select>
           </label>
+          {available.length === 0 ? (
+            <p className="muted" style={{ margin: 0 }}>
+              No hay carteles disponibles para asignar.
+            </p>
+          ) : (
+            <div className="stack">
+              {available.map((item) => (
+                <label key={item.id} style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(item.id)}
+                    onChange={(e) =>
+                      setSelected((current) =>
+                        e.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id),
+                      )
+                    }
+                  />
+                  <span>{item.cartelId || item.uniqueCode || item.id}</span>
+                </label>
+              ))}
+            </div>
+          )}
           <button
             className="btn"
             type="button"
+            disabled={selected.length === 0 || !resellerId}
             onClick={async () => {
               const res = await fetch("/api/qrs/assign", {
                 method: "POST",
@@ -233,17 +257,6 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
           const editing = openId === item.id;
           return (
             <article key={item.id} className="card-panel" style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-              {admin && !ownerId && item.status === "disponible" ? (
-                <input
-                  type="checkbox"
-                  checked={selected.includes(item.id)}
-                  onChange={(e) =>
-                    setSelected((current) =>
-                      e.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id),
-                    )
-                  }
-                />
-              ) : null}
               <QrPreview id={code} />
               <div className="stack" style={{ flex: "1 1 240px" }}>
                 <div>
