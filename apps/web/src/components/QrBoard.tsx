@@ -29,6 +29,10 @@ function isHttpUrl(value: string) {
   }
 }
 
+function publicSlug(item: QrItem) {
+  return item.token || item.uniqueCode || item.id;
+}
+
 function QrPreview({ id }: { id: string }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
@@ -254,10 +258,11 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
         {visible.length === 0 ? <p className="muted">No hay carteles para mostrar.</p> : null}
         {visible.map((item) => {
           const code = item.uniqueCode || item.id;
+          const slug = publicSlug(item);
           const editing = openId === item.id;
           return (
             <article key={item.id} className="card-panel" style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-              <QrPreview id={code} />
+              <QrPreview id={slug} />
               <div className="stack" style={{ flex: "1 1 240px" }}>
                 <div>
                   <strong>{item.cartelId || item.id}</strong>
@@ -272,11 +277,11 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {item.url ? (
-                    <a className="btn secondary" href={`/r/${code}`} target="_blank" rel="noreferrer">
+                    <a className="btn secondary" href={`/r/${slug}`} target="_blank" rel="noreferrer">
                       Probar
                     </a>
                   ) : null}
-                  <button className="btn" type="button" onClick={() => downloadPng(code)}>
+                  <button className="btn" type="button" onClick={() => downloadPng(slug)}>
                     Descargar PNG
                   </button>
                   <button className="btn secondary" type="button" onClick={() => setOpenId(editing ? null : item.id)}>
@@ -340,7 +345,7 @@ function PosterForm({
       }}
     >
       <p className="muted" style={{ margin: 0 }}>
-        URL del QR: /r/{item.uniqueCode || item.id}
+        URL del QR: /r/{item.token || item.uniqueCode || item.id}
       </p>
       <label className="label">
         Comercio

@@ -56,6 +56,7 @@ export type QrItem = {
   ownerName?: string;
   cartelId?: string;
   uniqueCode?: string;
+  token?: string;
   status?: PosterStatus;
   assignedAt?: string;
   soldAt?: string;

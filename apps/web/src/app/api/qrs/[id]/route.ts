@@ -78,7 +78,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     };
   }
 
-  next = { ...next, id: current.id, uniqueCode: current.uniqueCode || current.id, cartelId: current.cartelId };
+  next = {
+    ...next,
+    id: current.id,
+    uniqueCode: current.uniqueCode || current.id,
+    cartelId: current.cartelId,
+    token: current.token,
+  };
   const saved = items.map((item) => (item.id === id ? next : item));
   await writeCatalog(saved);
   return NextResponse.json(next);

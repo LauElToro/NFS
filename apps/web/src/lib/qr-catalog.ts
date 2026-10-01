@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { readStored, writeStored } from "./blob-store";
 import { defaultQrs, type QrItem, type UrlChange } from "./qr-store";
 
@@ -62,6 +62,7 @@ function persistable(item: QrItem): QrItem {
     updatedAt: item.updatedAt,
     cartelId: item.cartelId,
     uniqueCode: item.uniqueCode || item.id,
+    token: item.token,
     status,
     assignedAt: item.assignedAt,
     soldAt: item.soldAt,
@@ -106,6 +107,7 @@ export async function createStock(count: number): Promise<QrItem[]> {
     const poster = persistable({
       id: code,
       uniqueCode: code,
+      token: randomUUID(),
       cartelId: nextCartelId([...items, ...created]),
       title: "",
       url: "",
@@ -159,6 +161,7 @@ export function recordDestination(
     ...patch,
     id: item.id,
     uniqueCode: item.uniqueCode || item.id,
+    token: item.token,
     cartelId: item.cartelId,
     url,
     history: nextHistory,

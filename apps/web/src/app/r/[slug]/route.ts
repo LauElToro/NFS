@@ -8,7 +8,9 @@ export async function GET(
   ctx: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await ctx.params;
-  const qr = (await readCatalog()).find((item) => item.id === slug || item.uniqueCode === slug);
+  const qr = (await readCatalog()).find((item) =>
+    item.token ? item.token === slug : item.id === slug || item.uniqueCode === slug,
+  );
   if (!qr || qr.active === false || qr.status === "bloqueado") {
     return new NextResponse(
       `<!doctype html><html lang="es"><body style="font-family:system-ui;background:#111;color:#eee;display:grid;place-items:center;min-height:100vh"><div><h1>QR no disponible</h1><p>Este código fue eliminado o no existe.</p></div></body></html>`,
