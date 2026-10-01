@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { DESTINATION_LABELS, type DestinationType, type QrItem } from "@/lib/qr-store";
+import {
+  DESTINATION_LABELS,
+  POSTER_STATUSES,
+  STATUS_LABELS,
+  type DestinationType,
+  type PosterStatus,
+  type QrItem,
+} from "@/lib/qr-store";
 
 const DESTINATIONS = Object.entries(DESTINATION_LABELS) as [DestinationType, string][];
 
@@ -10,13 +17,8 @@ function destinationLabel(type?: string) {
   return DESTINATION_LABELS[(type as DestinationType) || "otro"] ?? "Otro enlace";
 }
 
-type Account = {
-  id: string;
-  name: string;
-  email: string;
-  role: "admin" | "reseller";
-  credits: number;
-};
+type Account = { id: string; name: string; email: string; role: "admin" | "reseller" };
+type Reseller = { id: string; name: string; email: string; active: boolean };
 
 function isHttpUrl(value: string) {
   try {
@@ -29,7 +31,6 @@ function isHttpUrl(value: string) {
 
 function QrPreview({ id }: { id: string }) {
   const [src, setSrc] = useState<string | null>(null);
-
   useEffect(() => {
     let cancelled = false;
     QRCode.toDataURL(`${window.location.origin}/r/${id}`, { width: 220, margin: 1 }).then((url) => {
@@ -39,51 +40,45 @@ function QrPreview({ id }: { id: string }) {
       cancelled = true;
     };
   }, [id]);
-
   if (!src) return null;
-
   return (
-    <img
-      src={src}
-      alt={`Vista previa del QR ${id}`}
-      width={180}
-      height={180}
-      style={{ background: "#fff", borderRadius: 12, padding: 8 }}
-    />
+    <img src={src} alt={`QR ${id}`} width={160} height={160} style={{ background: "#fff", borderRadius: 12, padding: 8 }} />
   );
 }
 
-async function downloadPng(item: QrItem) {
-  const dataUrl = await QRCode.toDataURL(`${window.location.origin}/r/${item.id}`, {
-    width: 512,
-    margin: 2,
-  });
+async function downloadPng(id: string) {
+  const dataUrl = await QRCode.toDataURL(`${window.location.origin}/r/${id}`, { width: 512, margin: 2 });
   const a = document.createElement("a");
   a.href = dataUrl;
-  a.download = `qr-${item.id}.png`;
+  a.download = `cartel-${id}.png`;
   a.click();
 }
 
 export function QrBoard({ ownerId }: { ownerId?: string }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [items, setItems] = useState<QrItem[]>([]);
+  const [resellers, setResellers] = useState<Reseller[]>([]);
   const [ready, setReady] = useState(false);
-  const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
-  const [destinationType, setDestinationType] = useState<DestinationType>("google");
   const [query, setQuery] = useState("");
-  const [packCode, setPackCode] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [urlFilter, setUrlFilter] = useState<string>("todos");
+  const [count, setCount] = useState(10);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [resellerId, setResellerId] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
-    const [meRes, qrRes] = await Promise.all([
-      fetch("/api/me"),
-      fetch(ownerId ? `/api/qrs?ownerId=${encodeURIComponent(ownerId)}` : "/api/qrs"),
-    ]);
-    if (!meRes.ok || !qrRes.ok) throw new Error("No se pudieron cargar los carteles");
-    setAccount((await meRes.json()) as Account);
+    const qrRes = await fetch(ownerId ? `/api/qrs?ownerId=${encodeURIComponent(ownerId)}` : "/api/qrs");
+    const meRes = await fetch("/api/me");
+    if (!qrRes.ok || !meRes.ok) throw new Error("No se pudieron cargar los carteles");
+    const me = (await meRes.json()) as Account;
+    setAccount(me);
     setItems((await qrRes.json()) as QrItem[]);
+    if (me.role === "admin") {
+      const usersRes = await fetch("/api/resellers");
+      if (usersRes.ok) setResellers((await usersRes.json()) as Reseller[]);
+    }
   }
 
   useEffect(() => {
@@ -92,253 +87,285 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
       .finally(() => setReady(true));
   }, [ownerId]);
 
-  const reseller = account?.role === "reseller";
-  const readOnly = Boolean(ownerId);
+  const admin = account?.role === "admin";
   const visible = items.filter((item) => {
-    const text = `${item.title} ${destinationLabel(item.destinationType)}`.toLowerCase();
-    return text.includes(query.trim().toLowerCase());
+    const text = `${item.cartelId || ""} ${item.uniqueCode || item.id} ${item.title} ${item.ownerName || ""}`.toLowerCase();
+    if (query.trim() && !text.includes(query.trim().toLowerCase())) return false;
+    if (statusFilter !== "todos" && item.status !== statusFilter) return false;
+    if (urlFilter === "con" && !item.url) return false;
+    if (urlFilter === "sin" && item.url) return false;
+    if (ownerId && item.ownerId !== ownerId) return false;
+    return true;
   });
 
-  async function save(item: QrItem, patch: Partial<QrItem>) {
-    const next = { ...item, ...patch };
-    const res = await fetch(`/api/qrs/${item.id}`, {
+  async function patch(id: string, body: Record<string, unknown>) {
+    const res = await fetch(`/api/qrs/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        title: next.title,
-        url: next.url,
-        destinationType: next.destinationType,
-        active: next.active,
-      }),
+      body: JSON.stringify(body),
     });
-    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
     if (!res.ok) {
-      setError(body?.error ?? "No se pudo guardar");
+      setError(data?.error ?? "No se pudo guardar");
       return;
     }
     setError(null);
-    setItems((current) => current.map((qr) => (qr.id === item.id ? { ...qr, ...next } : qr)));
+    await load();
   }
 
   if (!ready) return null;
 
   return (
     <div className="stack" style={{ gap: "1.5rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ margin: "0 0 0.35rem" }}>{reseller ? `Hola, ${account?.name}` : "Tus QRs"}</h1>
-          <p className="muted" style={{ margin: 0 }}>
-            El QR impreso sigue igual. Si cambiás el destino, la redirección cambia para todos.
-          </p>
-        </div>
-        {reseller ? (
-          <div className="card-panel" style={{ minWidth: 180 }}>
-            <p className="muted" style={{ margin: 0 }}>
-              Créditos disponibles
-            </p>
-            <strong style={{ fontSize: "2rem" }}>{account?.credits ?? 0}</strong>
-          </div>
-        ) : null}
+      <div>
+        <h1 style={{ margin: "0 0 0.35rem" }}>{admin ? "Inventario" : `Hola, ${account?.name}`}</h1>
+        <p className="muted" style={{ margin: 0 }}>
+          {admin
+            ? "Cada cartel tiene un QR permanente. Asignalo a un revendedor; el destino se configura después."
+            : "Configurá el destino de los carteles que te asignaron. El QR impreso no cambia."}
+        </p>
       </div>
 
-      {reseller && !readOnly ? (
+      {admin && !ownerId ? (
         <form
           className="card-panel stack"
           onSubmit={async (e) => {
             e.preventDefault();
-            const res = await fetch("/api/packs", {
-              method: "PUT",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ code: packCode }),
-            });
-            const body = (await res.json().catch(() => null)) as { error?: string; account?: Account } | null;
-            if (!res.ok || !body?.account) {
-              setError(body?.error ?? "No se pudo activar el pack");
-              return;
-            }
-            setAccount(body.account);
-            setPackCode("");
-            setError(null);
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Activar pack</h2>
-          <label className="label">
-            Código
-            <input className="input" value={packCode} onChange={(e) => setPackCode(e.target.value)} placeholder="NFS30-...." />
-          </label>
-          <button className="btn secondary" type="submit">
-            Activar
-          </button>
-        </form>
-      ) : null}
-
-      {!readOnly ? (
-        <form
-          className="card-panel stack"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (reseller && (account?.credits ?? 0) < 1) {
-              setError("No hay créditos disponibles. Tenés que adquirir un nuevo pack.");
-              return;
-            }
-            if (!title.trim() || !isHttpUrl(url.trim())) {
-              setError("Completá el nombre y una URL válida");
-              return;
-            }
-            setCreating(true);
             const res = await fetch("/api/qrs", {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ title, url, destinationType }),
+              body: JSON.stringify({ count }),
             });
-            const body = (await res.json().catch(() => null)) as {
-              error?: string;
-              item?: QrItem;
-              account?: Account;
-            } | null;
-            setCreating(false);
-            if (!res.ok || !body?.item) {
-              setError(body?.error ?? "No se pudo crear el cartel");
+            const data = (await res.json().catch(() => null)) as { error?: string } | null;
+            if (!res.ok) {
+              setError(data?.error ?? "No se pudieron crear");
               return;
             }
             setError(null);
-            setItems((current) => [body.item!, ...current]);
-            if (body.account) setAccount(body.account);
-            setTitle("");
-            setUrl("");
+            await load();
           }}
         >
-          <h2 style={{ marginTop: 0 }}>{reseller ? "Crear cartel" : "Crear QR"}</h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: "0.75rem",
-            }}
-          >
-            <label className="label">
-              Nombre del negocio
-              <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Barbería Los Pibes" />
-            </label>
-            <label className="label">
-              Tipo de destino
-              <select className="input" value={destinationType} onChange={(e) => setDestinationType(e.target.value as DestinationType)}>
-                {DESTINATIONS.map(([id, label]) => (
-                  <option key={id} value={id}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="label">
-              URL
-              <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} type="url" required placeholder="https://..." />
-            </label>
-          </div>
-          {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
-          <button className="btn" type="submit" disabled={creating}>
-            {reseller ? "Generar QR" : "Crear QR"}
+          <h2 style={{ marginTop: 0 }}>Crear carteles</h2>
+          <label className="label">
+            Cantidad
+            <input className="input" type="number" min={1} max={100} value={count} onChange={(e) => setCount(Number(e.target.value))} />
+          </label>
+          <button className="btn" type="submit">
+            Crear cartel
           </button>
         </form>
       ) : null}
 
-      {!reseller && error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
+      {admin && !ownerId ? (
+        <div className="card-panel stack">
+          <h2 style={{ marginTop: 0 }}>Asignar stock</h2>
+          <label className="label">
+            Revendedor
+            <select className="input" value={resellerId} onChange={(e) => setResellerId(e.target.value)}>
+              <option value="">Elegir</option>
+              {resellers.filter((user) => user.active).map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} · {user.email}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="btn"
+            type="button"
+            onClick={async () => {
+              const res = await fetch("/api/qrs/assign", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ resellerId, ids: selected }),
+              });
+              const data = (await res.json().catch(() => null)) as { error?: string; assigned?: number } | null;
+              if (!res.ok) {
+                setError(data?.error ?? "No se pudo asignar");
+                return;
+              }
+              setSelected([]);
+              setError(null);
+              await load();
+            }}
+          >
+            Asignar {selected.length} cartel{selected.length === 1 ? "" : "es"}
+          </button>
+        </div>
+      ) : null}
 
-      <label className="label">
-        Buscar
-        <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nombre del negocio" />
-      </label>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
+        <label className="label">
+          Buscar
+          <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Código, comercio o revendedor" />
+        </label>
+        {admin ? (
+          <label className="label">
+            Estado
+            <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="todos">Todos</option>
+              {POSTER_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {admin ? (
+          <label className="label">
+            Destino
+            <select className="input" value={urlFilter} onChange={(e) => setUrlFilter(e.target.value)}>
+              <option value="todos">Todos</option>
+              <option value="con">Con URL</option>
+              <option value="sin">Sin URL</option>
+            </select>
+          </label>
+        ) : null}
+      </div>
+
+      {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
 
       <div className="stack">
-        {visible.length === 0 ? <p className="muted">Todavía no hay carteles.</p> : null}
-        {visible.map((item, index) => (
-          <div key={item.id} className="card-panel" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "flex-start" }}>
-            <QrPreview id={item.id} />
-            <div className="stack" style={{ flex: "1 1 240px" }}>
-              <p className="muted" style={{ margin: 0 }}>
-                #{String(items.length - index).padStart(3, "0")}
-                {account?.role === "admin" && item.ownerEmail ? ` · ${item.ownerName || item.ownerEmail}` : ""}
-                {" · "}
-                {item.active === false ? "Inactivo" : "Activo"}
-              </p>
-              <label className="label">
-                Cliente
+        {visible.length === 0 ? <p className="muted">No hay carteles para mostrar.</p> : null}
+        {visible.map((item) => {
+          const code = item.uniqueCode || item.id;
+          const editing = openId === item.id;
+          return (
+            <article key={item.id} className="card-panel" style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+              {admin && !ownerId && item.status === "disponible" ? (
                 <input
-                  className="input"
-                  value={item.title}
-                  onChange={(e) => setItems((current) => current.map((qr) => (qr.id === item.id ? { ...qr, title: e.target.value } : qr)))}
-                  onBlur={(e) => save(item, { title: e.target.value })}
+                  type="checkbox"
+                  checked={selected.includes(item.id)}
+                  onChange={(e) =>
+                    setSelected((current) =>
+                      e.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id),
+                    )
+                  }
                 />
-              </label>
-              <label className="label">
-                Tipo de destino
-                <select
-                  className="input"
-                  value={item.destinationType || "otro"}
-                  onChange={(e) => {
-                    const destinationType = e.target.value as DestinationType;
-                    setItems((current) => current.map((qr) => (qr.id === item.id ? { ...qr, destinationType } : qr)));
-                    save(item, { destinationType });
-                  }}
-                >
-                  {DESTINATIONS.map(([id, label]) => (
-                    <option key={id} value={id}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="label">
-                URL
-                <input
-                  className="input"
-                  type="url"
-                  value={item.url}
-                  onChange={(e) => setItems((current) => current.map((qr) => (qr.id === item.id ? { ...qr, url: e.target.value } : qr)))}
-                  onBlur={(e) => save(item, { url: e.target.value })}
-                />
-              </label>
-              <p className="muted" style={{ margin: 0 }}>
-                Destino: {destinationLabel(item.destinationType)}
-              </p>
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                <a className="btn secondary" href={`/r/${item.id}`} target="_blank" rel="noreferrer">
-                  Probar
-                </a>
-                <button className="btn" type="button" onClick={() => downloadPng(item)}>
-                  Descargar PNG
-                </button>
-                {account?.role === "admin" ? (
-                  <button
-                    className="btn secondary"
-                    type="button"
-                    onClick={() => save(item, { active: item.active === false })}
-                  >
-                    {item.active === false ? "Activar" : "Desactivar"}
+              ) : null}
+              <QrPreview id={code} />
+              <div className="stack" style={{ flex: "1 1 240px" }}>
+                <div>
+                  <strong>{item.cartelId || item.id}</strong>
+                  <p className="muted" style={{ margin: "0.25rem 0 0" }}>
+                    {code} · {STATUS_LABELS[item.status || "disponible"]}
+                    {item.ownerName ? ` · ${item.ownerName}` : ""}
+                    {item.title ? ` · ${item.title}` : ""}
+                  </p>
+                  <p className="muted" style={{ margin: "0.25rem 0 0" }}>
+                    Destino: {item.url || "sin configurar"}
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  {item.url ? (
+                    <a className="btn secondary" href={`/r/${code}`} target="_blank" rel="noreferrer">
+                      Probar
+                    </a>
+                  ) : null}
+                  <button className="btn" type="button" onClick={() => downloadPng(code)}>
+                    Descargar PNG
                   </button>
-                ) : null}
-                {!readOnly || account?.role === "admin" ? (
-                  <button
-                    className="btn secondary"
-                    type="button"
-                    onClick={async () => {
-                      if (!window.confirm(`¿Seguro que querés eliminar «${item.title || item.id}»?`)) return;
-                      const res = await fetch(`/api/qrs/${item.id}`, { method: "DELETE" });
-                      if (!res.ok) {
-                        setError("No se pudo eliminar");
-                        return;
-                      }
-                      setItems((current) => current.filter((qr) => qr.id !== item.id));
-                    }}
-                  >
-                    Eliminar
+                  <button className="btn secondary" type="button" onClick={() => setOpenId(editing ? null : item.id)}>
+                    {editing ? "Cerrar" : "Configurar"}
                   </button>
+                </div>
+                {editing ? (
+                  <PosterForm item={item} admin={Boolean(admin)} onSave={(body) => patch(item.id, body)} />
                 ) : null}
               </div>
-            </div>
-          </div>
-        ))}
+            </article>
+          );
+        })}
       </div>
     </div>
+  );
+}
+
+function PosterForm({
+  item,
+  admin,
+  onSave,
+}: {
+  item: QrItem;
+  admin: boolean;
+  onSave: (body: Record<string, unknown>) => Promise<void>;
+}) {
+  const [title, setTitle] = useState(item.title);
+  const [url, setUrl] = useState(item.url);
+  const [destinationType, setDestinationType] = useState<DestinationType>(item.destinationType || "google");
+  const [status, setStatus] = useState<PosterStatus>(item.status || "disponible");
+
+  return (
+    <form
+      className="stack"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!isHttpUrl(url.trim())) return;
+        await onSave({ title, url, destinationType, ...(admin ? { status } : {}) });
+      }}
+    >
+      <p className="muted" style={{ margin: 0 }}>
+        URL del QR: /r/{item.uniqueCode || item.id}
+      </p>
+      <label className="label">
+        Comercio
+        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nombre del comercio" />
+      </label>
+      <label className="label">
+        Tipo de destino
+        <select className="input" value={destinationType} onChange={(e) => setDestinationType(e.target.value as DestinationType)}>
+          {DESTINATIONS.map(([id, label]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="label">
+        URL de destino
+        <input className="input" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." required />
+      </label>
+      {admin ? (
+        <label className="label">
+          Estado
+          <select className="input" value={status} onChange={(e) => setStatus(e.target.value as PosterStatus)}>
+            {POSTER_STATUSES.map((value) => (
+              <option key={value} value={value}>
+                {STATUS_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <button className="btn" type="submit">
+          Guardar cambios
+        </button>
+        {!admin ? (
+          <button className="btn secondary" type="button" onClick={() => onSave({ title, url, destinationType, sale: true })}>
+            Registrar venta
+          </button>
+        ) : null}
+      </div>
+      {item.history && item.history.length > 0 ? (
+        <div className="stack">
+          <strong>Historial</strong>
+          {item.history.map((change) => (
+            <p key={`${change.at}-${change.to}`} className="muted" style={{ margin: 0 }}>
+              {new Date(change.at).toLocaleString("es-AR")} · {change.from || "vacío"} → {change.to || "vacío"} · {change.byName}
+              {admin && change.from ? (
+                <>
+                  {" "}
+                  <button className="btn secondary" type="button" onClick={() => onSave({ restoreUrl: change.from })}>
+                    Restaurar
+                  </button>
+                </>
+              ) : null}
+            </p>
+          ))}
+        </div>
+      ) : null}
+    </form>
   );
 }

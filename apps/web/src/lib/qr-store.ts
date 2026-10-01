@@ -11,6 +11,38 @@ export const DESTINATION_LABELS: Record<DestinationType, string> = {
   otro: "Otro enlace",
 };
 
+export const POSTER_STATUSES = [
+  "disponible",
+  "asignado",
+  "enviado",
+  "recibido",
+  "configurando",
+  "vendido",
+  "activo",
+  "bloqueado",
+] as const;
+
+export type PosterStatus = (typeof POSTER_STATUSES)[number];
+
+export const STATUS_LABELS: Record<PosterStatus, string> = {
+  disponible: "Disponible",
+  asignado: "Asignado",
+  enviado: "Enviado",
+  recibido: "Recibido",
+  configurando: "Configurando",
+  vendido: "Vendido",
+  activo: "Activo",
+  bloqueado: "Bloqueado",
+};
+
+export type UrlChange = {
+  at: string;
+  from: string;
+  to: string;
+  byId: string;
+  byName: string;
+};
+
 export type QrItem = {
   id: string;
   title: string;
@@ -22,6 +54,12 @@ export type QrItem = {
   updatedAt?: string;
   ownerEmail?: string;
   ownerName?: string;
+  cartelId?: string;
+  uniqueCode?: string;
+  status?: PosterStatus;
+  assignedAt?: string;
+  soldAt?: string;
+  history?: UrlChange[];
 };
 
 const KEY = "nfs-qrs";
