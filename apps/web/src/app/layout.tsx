@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
+import { BrandScene } from "@/components/BrandScene";
 import "./globals.css";
 
 const display = Fraunces({
@@ -25,6 +26,7 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${display.variable} ${body.variable}`}>
         <style>{`:root{--font-display:var(--font-display-loaded),Georgia,serif;--font-body:var(--font-body-loaded),system-ui,sans-serif}`}</style>
+        <BrandScene />
         {children}
       </body>
     </html>
