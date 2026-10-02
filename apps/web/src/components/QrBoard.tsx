@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
+import { CountUp, Drawer } from "@/components/ui";
 import {
   DESTINATION_LABELS,
   POSTER_STATUSES,
@@ -60,6 +61,14 @@ async function downloadPng(id: string) {
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
+type Summary = { total: number; disponible: number; asignados: number; enUso: number; comercios: number };
+
+const EMPTY_SUMMARY: Summary = { total: 0, disponible: 0, asignados: 0, enUso: 0, comercios: 0 };
+
+function toast(message: string, tone: "ok" | "danger" | "warn" = "ok") {
+  window.dispatchEvent(new CustomEvent("nfs-toast", { detail: { message, tone } }));
+}
+
 export function QrBoard({ ownerId }: { ownerId?: string }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [items, setItems] = useState<QrItem[]>([]);
@@ -81,6 +90,8 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
   const [codeLookup, setCodeLookup] = useState("");
   const [total, setTotal] = useState(0);
   const [availableCount, setAvailableCount] = useState(0);
+  const [summary, setSummary] = useState<Summary>(EMPTY_SUMMARY);
+  const [creating, setCreating] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<PosterStatus>("asignado");
   const [reload, setReload] = useState(0);
 
@@ -126,12 +137,19 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
       fetch(`/api/qrs?${params}`, { signal: controller.signal })
         .then(async (res) => {
           if (!res.ok) throw new Error("No se pudieron cargar los carteles");
-          return (await res.json()) as { items: QrItem[]; total: number; page: number; availableCount: number };
+          return (await res.json()) as {
+            items: QrItem[];
+            total: number;
+            page: number;
+            availableCount: number;
+            summary?: Summary;
+          };
         })
         .then((data) => {
           setItems(data.items);
           setTotal(data.total);
           setAvailableCount(data.availableCount);
+          if (data.summary) setSummary(data.summary);
           if (data.page !== page) setPage(data.page);
         })
         .catch((e: Error) => {
@@ -143,6 +161,36 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
       controller.abort();
     };
   }, [ready, account?.role, ownerId, page, pageSize, query, statusFilter, sort, resellerFilter, commerce, codeLookup, reload]);
+
+  useEffect(() => {
+    if (error) toast(error, "danger");
+  }, [error]);
+
+  useEffect(() => {
+    const pending = window.sessionStorage.getItem("nfs-q");
+    if (!pending || ownerId) return;
+    window.sessionStorage.removeItem("nfs-q");
+    setQuery(pending);
+    setPage(1);
+  }, [ownerId]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const id = window.location.hash.replace("#", "");
+    if (!id) return;
+    document.getElementById(id)?.scrollIntoView({ block: "start" });
+  }, [ready, items.length]);
+
+  useEffect(() => {
+    function onSearch(event: Event) {
+      const value = String((event as CustomEvent<string>).detail ?? "");
+      setCodeLookup("");
+      setQuery(value);
+      setPage(1);
+    }
+    window.addEventListener("nfs-search", onSearch);
+    return () => window.removeEventListener("nfs-search", onSearch);
+  }, []);
 
   const admin = account?.role === "admin";
   const inventory = Boolean(admin && !ownerId);
@@ -168,38 +216,67 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
       return;
     }
     setError(null);
+    toast("Cambios guardados");
     await load();
   }
 
-  if (!ready) return null;
+  if (!ready) {
+    return (
+      <div className="stack" aria-busy="true" aria-label="Cargando carteles">
+        <div className="skeleton" style={{ width: "12rem", height: "1.8rem" }} />
+        <div className="stat-grid">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="skeleton lg" />
+          ))}
+        </div>
+        <div className="skeleton lg" />
+      </div>
+    );
+  }
+
+  const boardSummary: Summary = inventory
+    ? summary
+    : {
+        total: items.length,
+        disponible: items.filter((item) => item.status === "disponible").length,
+        asignados: items.filter((item) => ["asignado", "enviado", "recibido"].includes(item.status || "")).length,
+        enUso: items.filter((item) => ["configurando", "vendido", "activo"].includes(item.status || "")).length,
+        comercios: new Set(items.map((item) => item.title.trim()).filter(Boolean)).size,
+      };
+  const openItem = items.find((item) => item.id === openId) ?? null;
 
   return (
     <div className="stack" style={{ gap: "1.5rem" }}>
       <div>
-        <h1 style={{ margin: "0 0 0.35rem" }}>{admin ? "Inventario" : `Hola, ${account?.name}`}</h1>
-        <p className="muted" style={{ margin: 0 }}>
+        <h1 className="page-title">{admin && !ownerId ? "Panel" : admin ? "Carteles del revendedor" : `Hola, ${account?.name}`}</h1>
+        <p className="page-lead muted">
           {admin
             ? "Cada cartel tiene un QR permanente. Asignalo a un revendedor; el destino se configura después."
             : "Configurá el destino de los carteles que te asignaron. El QR impreso no cambia."}
         </p>
       </div>
+      <Stats summary={boardSummary} resellers={inventory ? resellers.length : undefined} />
 
       {admin && !ownerId ? (
         <form
+          id="crear"
           className="card-panel stack"
           onSubmit={async (e) => {
             e.preventDefault();
+            setCreating(true);
             const res = await fetch("/api/qrs", {
               method: "POST",
               headers: { "content-type": "application/json" },
               body: JSON.stringify({ count }),
             });
             const data = (await res.json().catch(() => null)) as { error?: string } | null;
+            setCreating(false);
             if (!res.ok) {
               setError(data?.error ?? "No se pudieron crear");
               return;
             }
             setError(null);
+            toast("Carteles creados correctamente");
             await load();
           }}
         >
@@ -208,7 +285,7 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
             Cantidad
             <input className="input" type="number" min={1} max={100} value={count} onChange={(e) => setCount(Number(e.target.value))} />
           </label>
-          <button className="btn" type="submit">
+          <button className="btn" type="submit" disabled={creating} aria-busy={creating}>
             Crear cartel
           </button>
         </form>
@@ -281,11 +358,12 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
               return;
             }
             setSelected([]);
-            setError(
-              data.assigned < selected.length
-                ? `Se asignaron ${data.assigned} de ${selected.length}. Solo entran los que están disponibles.`
-                : null,
-            );
+            if (data.assigned < selected.length) {
+              setError(`Se asignaron ${data.assigned} de ${selected.length}. Solo entran los que están disponibles.`);
+            } else {
+              setError(null);
+              toast("QR asignado correctamente");
+            }
             await load();
           }}
           onBulkStatus={async () => {
@@ -302,6 +380,7 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
             }
             setSelected([]);
             setError(null);
+            toast("Estado actualizado");
             await load();
           }}
           onBulkDelete={async () => {
@@ -315,6 +394,7 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
             }
             setSelected([]);
             setError(null);
+            toast("Carteles eliminados");
             await load();
           }}
           onDelete={async (item: QrItem) => {
@@ -328,6 +408,7 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
             }
             setSelected((current) => current.filter((id) => id !== item.id));
             setError(null);
+            toast("Cartel eliminado");
             await load();
           }}
           onSave={(id, body) => patch(id, body)}
@@ -416,6 +497,7 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
                         }
                         setSelected((current) => current.filter((id) => id !== item.id));
                         setError(null);
+                        toast("Cartel eliminado");
                         await load();
                       }}
                     >
@@ -423,15 +505,17 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
                     </button>
                   ) : null}
                 </div>
-                {editing ? (
-                  <PosterForm item={item} admin={Boolean(admin)} onSave={(body) => patch(item.id, body)} />
-                ) : null}
               </div>
             </article>
           );
         })}
       </div>
       </>
+      ) : null}
+      {!inventory && openItem ? (
+        <Drawer open title={openItem.cartelId || openItem.uniqueCode || "Cartel"} onClose={() => setOpenId(null)}>
+          <PosterForm key={openItem.updatedAt || openItem.id} item={openItem} admin={Boolean(admin)} onSave={(body) => patch(openItem.id, body)} />
+        </Drawer>
       ) : null}
     </div>
   );
@@ -514,20 +598,24 @@ function AdminInventory({
   onSave: (id: string, body: Record<string, unknown>) => Promise<void>;
 }) {
   const [codeDraft, setCodeDraft] = useState(codeLookup);
+  const [working, setWorking] = useState(false);
   const pageIds = items.map((item) => item.id);
+  const editingItem = items.find((item) => item.id === openId) ?? null;
+  async function run(task: () => Promise<void>) {
+    setWorking(true);
+    try {
+      await task();
+    } finally {
+      setWorking(false);
+    }
+  }
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <>
-      <style>{`
-        .qr-admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
-        @media (min-width: 720px) { .qr-admin-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-        @media (min-width: 1024px) { .qr-admin-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-        @media (min-width: 1400px) { .qr-admin-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-      `}</style>
-      <div className="card-panel stack">
+      <div id="asignar" className="card-panel stack">
         <h2 style={{ marginTop: 0 }}>Asignar stock</h2>
         {availableCount === 0 ? (
           <p className="muted" style={{ margin: 0 }}>
@@ -551,7 +639,7 @@ function AdminInventory({
               ))}
           </select>
         </label>
-        <button className="btn" type="button" disabled={selected.length === 0 || !resellerId} onClick={() => void onAssign()}>
+        <button className="btn" type="button" disabled={working || selected.length === 0 || !resellerId} aria-busy={working} onClick={() => void run(onAssign)}>
           Asignar {selected.length} cartel{selected.length === 1 ? "" : "es"}
         </button>
       </div>
@@ -591,7 +679,7 @@ function AdminInventory({
         ) : null}
       </form>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
+      <div id="filtros" className="filters">
         <label className="label">
           Buscar
           <input
@@ -673,7 +761,7 @@ function AdminInventory({
       </div>
 
       {selected.length > 0 ? (
-        <div className="card-panel" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "end" }}>
+        <div className="bulk-bar card-panel">
           <label className="label" style={{ margin: 0 }}>
             Cambiar estado
             <select className="input" value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value as PosterStatus)}>
@@ -684,23 +772,28 @@ function AdminInventory({
               ))}
             </select>
           </label>
-          <button className="btn secondary" type="button" onClick={() => void onBulkStatus()}>
+          <button className="btn secondary" type="button" disabled={working} aria-busy={working} onClick={() => void run(onBulkStatus)}>
             Aplicar estado
           </button>
-          <button className="btn secondary" type="button" onClick={() => void onBulkDelete()}>
+          <button className="btn danger" type="button" disabled={working} aria-busy={working} onClick={() => void run(onBulkDelete)}>
             Eliminar selección
           </button>
         </div>
       ) : null}
 
-      {items.length === 0 ? <p className="muted">No hay carteles para mostrar.</p> : null}
-      <div className="qr-admin-grid">
+      {items.length === 0 ? (
+        <div className="empty-state card-panel">
+          <h2>{codeLookup ? "No encontramos ese QR" : "No hay QR para mostrar"}</h2>
+          <p className="muted">Probá modificar los filtros o generar un nuevo QR.</p>
+        </div>
+      ) : null}
+      <div id="carteles" className="qr-admin-grid">
         {items.map((item) => {
           const code = item.uniqueCode || item.id;
           const slug = publicSlug(item);
           const editing = openId === item.id;
           return (
-            <article key={item.id} className="card-panel stack" style={{ margin: 0 }}>
+            <article key={item.id} className="card-panel interactive qr-card stack" style={{ margin: 0 }}>
               <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                 <input
                   type="checkbox"
@@ -717,7 +810,9 @@ function AdminInventory({
               <p className="muted" style={{ margin: 0 }}>
                 {code}
               </p>
-              <p style={{ margin: 0 }}>{STATUS_LABELS[item.status || "disponible"]}</p>
+              <p style={{ margin: 0 }}>
+                <span className={`status-pill status-${item.status || "disponible"}`}>{STATUS_LABELS[item.status || "disponible"]}</span>
+              </p>
               <p className="muted" style={{ margin: 0 }}>
                 {item.title || "Sin comercio"}
               </p>
@@ -743,13 +838,17 @@ function AdminInventory({
                   Eliminar
                 </button>
               </div>
-              {editing ? <PosterForm item={item} admin onSave={(body) => onSave(item.id, body)} /> : null}
             </article>
           );
         })}
       </div>
 
-      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+      <Drawer open={Boolean(editingItem)} title={editingItem?.cartelId || editingItem?.uniqueCode || "Cartel"} onClose={() => setOpenId(null)}>
+        {editingItem ? (
+          <PosterForm key={editingItem.updatedAt || editingItem.id} item={editingItem} admin onSave={(body) => onSave(editingItem.id, body)} />
+        ) : null}
+      </Drawer>
+      <div className="pager">
         <p className="muted" style={{ margin: 0 }}>
           Mostrando {from.toLocaleString("es-AR")}–{to.toLocaleString("es-AR")} de {total.toLocaleString("es-AR")} QR
         </p>
@@ -854,5 +953,36 @@ function PosterForm({
         </div>
       ) : null}
     </form>
+  );
+}
+
+function Stats({ summary, resellers }: { summary: Summary; resellers?: number }) {
+  const cards = [
+    { label: "Total de QR", value: summary.total, hint: "En el inventario" },
+    { label: "Disponibles", value: summary.disponible, hint: "Listos para asignar" },
+    { label: "Asignados", value: summary.asignados, hint: "Con revendedor" },
+    { label: "En uso", value: summary.enUso, hint: "Configurados o vendidos" },
+  ];
+  if (resellers !== undefined) {
+    cards.push({ label: "Revendedores", value: resellers, hint: "Cuentas creadas" });
+    cards.push({ label: "Comercios", value: summary.comercios, hint: "Con nombre cargado" });
+  }
+  return (
+    <section className="stat-grid" aria-label="Resumen">
+      {cards.map((card) => (
+        <article key={card.label} className="card-panel interactive stat-card">
+          <span className="stat-icon" aria-hidden>
+            {card.label.slice(0, 1)}
+          </span>
+          <div className="stat-value">
+            <CountUp value={card.value} />
+          </div>
+          <div className="stat-label">{card.label}</div>
+          <p className="muted" style={{ margin: 0, fontSize: "0.78rem" }}>
+            {card.hint}
+          </p>
+        </article>
+      ))}
+    </section>
   );
 }

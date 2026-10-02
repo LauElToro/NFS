@@ -17,6 +17,8 @@ export default function ResellersPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   async function load() {
     const usersRes = await fetch("/api/resellers");
@@ -25,7 +27,9 @@ export default function ResellersPage() {
   }
 
   useEffect(() => {
-    load().catch((e: Error) => setError(e.message));
+    load()
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setReady(true));
   }, []);
 
   async function patch(id: string, body: Record<string, unknown>) {
@@ -53,15 +57,18 @@ export default function ResellersPage() {
       </div>
 
       <form
+        id="nuevo-revendedor"
         className="card-panel stack"
         onSubmit={async (e) => {
           e.preventDefault();
+          setCreating(true);
           const res = await fetch("/api/resellers", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ name, email, password, credits: 0 }),
           });
           const data = (await res.json().catch(() => null)) as { error?: string } | null;
+          setCreating(false);
           if (!res.ok) {
             setError(data?.error ?? "No se pudo crear");
             return;
@@ -70,6 +77,7 @@ export default function ResellersPage() {
           setEmail("");
           setPassword("");
           setError(null);
+          window.dispatchEvent(new CustomEvent("nfs-toast", { detail: { message: "Revendedor creado correctamente", tone: "ok" } }));
           await load();
         }}
       >
@@ -88,36 +96,75 @@ export default function ResellersPage() {
             <input className="input" type="text" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
           </label>
         </div>
-        <button className="btn" type="submit">
+        <button className="btn" type="submit" disabled={creating} aria-busy={creating}>
           Crear revendedor
         </button>
       </form>
 
       {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
 
-      <div className="stack">
-        {items.length === 0 ? <p className="muted">Todavía no hay revendedores.</p> : null}
-        {items.map((item) => (
-          <div key={item.id} className="card-panel stack">
-            <div>
-              <strong>{item.name}</strong>
-              <p className="muted" style={{ margin: "0.25rem 0 0" }}>
-                {item.email}
-                <br />
-                Carteles asignados: {item.qrCount} · {item.active ? "Activo" : "Inactivo"}
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <Link className="btn secondary" href={`/app/resellers/${item.id}`}>
-                Ver carteles
-              </Link>
-              <button className="btn secondary" type="button" onClick={() => patch(item.id, { active: !item.active })}>
-                {item.active ? "Desactivar" : "Activar"}
-              </button>
-            </div>
+      {!ready ? <div className="skeleton lg" /> : null}
+      {ready && items.length === 0 ? (
+        <div className="empty-state card-panel">
+          <span className="empty-icon" aria-hidden>R</span>
+          <h2>No tenés revendedores todavía</h2>
+          <p className="muted">Creá tu primer revendedor para comenzar.</p>
+          <a className="btn" href="#nuevo-revendedor">Crear revendedor</a>
+        </div>
+      ) : null}
+      {items.length > 0 ? (
+        <>
+          <div className="card-panel table-wrap only-desktop">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Carteles</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.name}</td>
+                    <td>{item.email}</td>
+                    <td>{item.qrCount}</td>
+                    <td>{item.active ? "Activo" : "Inactivo"}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                        <Link className="btn secondary small" href={`/app/resellers/${item.id}`}>Ver carteles</Link>
+                        <button className="btn secondary small" type="button" onClick={() => patch(item.id, { active: !item.active })}>
+                          {item.active ? "Desactivar" : "Activar"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+          <div className="only-mobile stack">
+            {items.map((item) => (
+              <article key={item.id} className="card-panel stack">
+                <strong>{item.name}</strong>
+                <p className="muted" style={{ margin: 0 }}>
+                  {item.email}
+                  <br />
+                  Carteles asignados: {item.qrCount} · {item.active ? "Activo" : "Inactivo"}
+                </p>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <Link className="btn secondary small" href={`/app/resellers/${item.id}`}>Ver carteles</Link>
+                  <button className="btn secondary small" type="button" onClick={() => patch(item.id, { active: !item.active })}>
+                    {item.active ? "Desactivar" : "Activar"}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

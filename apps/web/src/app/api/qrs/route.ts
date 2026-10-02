@@ -85,12 +85,20 @@ export async function GET(req: Request) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const page = Math.min(pages, Math.max(1, Number(url.searchParams.get("page")) || 1));
   const start = (page - 1) * pageSize;
+  const commerces = new Set(presented.map((item) => (item.title || "").trim().toLowerCase()).filter(Boolean));
   return NextResponse.json({
     items: filtered.slice(start, start + pageSize),
     total,
     page,
     pageSize,
     availableCount: presented.filter((item) => item.status === "disponible").length,
+    summary: {
+      total: presented.length,
+      disponible: presented.filter((item) => item.status === "disponible").length,
+      asignados: presented.filter((item) => ASSIGNED.has(item.status || "")).length,
+      enUso: presented.filter((item) => IN_USE.has(item.status || "")).length,
+      comercios: commerces.size,
+    },
   });
 }
 
