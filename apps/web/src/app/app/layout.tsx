@@ -10,7 +10,20 @@ export default async function AppLayout({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
-  const account = await findAccount(session.id);
+  let account;
+  try {
+    account = await findAccount(session.id);
+  } catch (error) {
+    console.error(error);
+    return (
+      <main className="auth-screen">
+        <section className="auth-card card-panel stack">
+          <h1>No se pudo abrir el panel</h1>
+          <p>Los carteles y las cuentas siguen guardados. Recargá la página.</p>
+        </section>
+      </main>
+    );
+  }
   if (!account || !account.active) redirect("/login");
 
   return (
