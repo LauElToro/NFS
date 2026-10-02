@@ -109,9 +109,9 @@ export function AppShell({
     <div className={`shell${collapsed ? " collapsed" : ""}${navOpen ? " nav-open" : ""}`}>
       <button className="nav-backdrop" type="button" aria-label="Cerrar menú" onClick={() => setNavOpen(false)} />
       <aside className="sidebar">
-        <Link href="/app" className="brand">
-          <span className="brand-mark">N</span>
-          <span className="brand-name">NFS QR</span>
+        <Link href="/app" className="brand" aria-label="ReviewsGO">
+          <img className="brand-logo" src="/reviewsgo-logo.png" alt="" />
+          <span className="brand-name">ReviewsGO</span>
         </Link>
         <nav aria-label="Secciones">
           {links.map((link) => (
@@ -142,6 +142,10 @@ export function AppShell({
           <button className="btn secondary icon menu-toggle" type="button" aria-label="Abrir menú" onClick={() => setNavOpen(true)}>
             <Icon d="M4 7h16M4 12h16M4 17h16" />
           </button>
+          <Link href="/app" className="topbar-brand" aria-label="ReviewsGO">
+            <img className="brand-logo" src="/reviewsgo-logo.png" alt="" />
+            <span>ReviewsGO</span>
+          </Link>
           <form className="topbar-search" onSubmit={search} role="search">
             <label className="label" style={{ margin: 0 }}>
               <span className="muted" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>

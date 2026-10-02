@@ -1,4 +1,4 @@
-# NFS QR
+# ReviewsGO
 
 QRs en `data/qrs.json`. El dominio de Netlify redirige `/r/<slug>` al destino de cada QR.
 

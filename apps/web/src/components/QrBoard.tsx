@@ -47,7 +47,7 @@ function QrPreview({ id, size = 160 }: { id: string; size?: number }) {
   }, [id]);
   if (!src) return null;
   return (
-    <img src={src} alt={`QR ${id}`} width={size} height={size} style={{ background: "#fff", borderRadius: 12, padding: 8, maxWidth: "100%", height: "auto" }} />
+    <img src={src} alt={`QR ${id}`} width={size} height={size} style={{ background: "#fff", borderRadius: 12, padding: 8, border: "1px solid #e4e8ef", maxWidth: "100%", height: "auto" }} />
   );
 }
 

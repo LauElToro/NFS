@@ -13,9 +13,9 @@ const body = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "NFS QR — QRs dinámicos para comercios",
+  title: "ReviewsGO — Carteles de reseñas con QR",
   description:
-    "Creá QRs dinámicos, medí escaneos y rentabilidad, sin reimprimir.",
+    "Gestioná carteles de reseñas con QR y NFC. El impreso no cambia cuando actualizás el destino.",
 };
 
 export default function RootLayout({

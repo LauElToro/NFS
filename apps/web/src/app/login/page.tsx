@@ -5,9 +5,7 @@ export default function LoginPage() {
   return (
     <main className="auth-screen">
       <section className="auth-card card-panel stack">
-        <p className="muted" style={{ margin: 0, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "0.75rem" }}>
-          NFS QR
-        </p>
+        <img className="brand-logo" src="/reviewsgo-logo.png" alt="ReviewsGO" />
         <h1 style={{ margin: 0 }}>Entrar</h1>
         <AuthForm action={loginAction} submitLabel="Entrar" />
         <p className="muted" style={{ margin: 0 }}>Si sos revendedor, entrá con el usuario que te dio el administrador.</p>
