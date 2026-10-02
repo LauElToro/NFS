@@ -33,7 +33,7 @@ function publicSlug(item: QrItem) {
   return item.token || item.uniqueCode || item.id;
 }
 
-function QrPreview({ id }: { id: string }) {
+function QrPreview({ id, size = 160 }: { id: string; size?: number }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +46,7 @@ function QrPreview({ id }: { id: string }) {
   }, [id]);
   if (!src) return null;
   return (
-    <img src={src} alt={`QR ${id}`} width={160} height={160} style={{ background: "#fff", borderRadius: 12, padding: 8 }} />
+    <img src={src} alt={`QR ${id}`} width={size} height={size} style={{ background: "#fff", borderRadius: 12, padding: 8, maxWidth: "100%", height: "auto" }} />
   );
 }
 
@@ -57,6 +57,8 @@ async function downloadPng(id: string) {
   a.download = `cartel-${id}.png`;
   a.click();
 }
+
+const PAGE_SIZES = [10, 25, 50, 100];
 
 export function QrBoard({ ownerId }: { ownerId?: string }) {
   const [account, setAccount] = useState<Account | null>(null);
@@ -71,18 +73,33 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
   const [resellerId, setResellerId] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [sort, setSort] = useState("newest");
+  const [resellerFilter, setResellerFilter] = useState("");
+  const [commerce, setCommerce] = useState("");
+  const [codeLookup, setCodeLookup] = useState("");
+  const [total, setTotal] = useState(0);
+  const [availableCount, setAvailableCount] = useState(0);
+  const [bulkStatus, setBulkStatus] = useState<PosterStatus>("asignado");
+  const [reload, setReload] = useState(0);
 
   async function load() {
-    const qrRes = await fetch(ownerId ? `/api/qrs?ownerId=${encodeURIComponent(ownerId)}` : "/api/qrs");
     const meRes = await fetch("/api/me");
-    if (!qrRes.ok || !meRes.ok) throw new Error("No se pudieron cargar los carteles");
+    if (!meRes.ok) throw new Error("No se pudieron cargar los carteles");
     const me = (await meRes.json()) as Account;
     setAccount(me);
-    setItems((await qrRes.json()) as QrItem[]);
     if (me.role === "admin") {
       const usersRes = await fetch("/api/resellers");
       if (usersRes.ok) setResellers((await usersRes.json()) as Reseller[]);
     }
+    if (me.role === "admin" && !ownerId) {
+      setReload((value) => value + 1);
+      return;
+    }
+    const qrRes = await fetch(ownerId ? `/api/qrs?ownerId=${encodeURIComponent(ownerId)}` : "/api/qrs");
+    if (!qrRes.ok) throw new Error("No se pudieron cargar los carteles");
+    setItems((await qrRes.json()) as QrItem[]);
   }
 
   useEffect(() => {
@@ -91,8 +108,44 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
       .finally(() => setReady(true));
   }, [ownerId]);
 
+  useEffect(() => {
+    if (!ready || account?.role !== "admin" || ownerId) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams({
+        view: "page",
+        page: String(page),
+        pageSize: String(pageSize),
+        q: query,
+        group: statusFilter,
+        sort,
+        reseller: resellerFilter,
+        commerce,
+        code: codeLookup,
+      });
+      fetch(`/api/qrs?${params}`, { signal: controller.signal })
+        .then(async (res) => {
+          if (!res.ok) throw new Error("No se pudieron cargar los carteles");
+          return (await res.json()) as { items: QrItem[]; total: number; page: number; availableCount: number };
+        })
+        .then((data) => {
+          setItems(data.items);
+          setTotal(data.total);
+          setAvailableCount(data.availableCount);
+          if (data.page !== page) setPage(data.page);
+        })
+        .catch((e: Error) => {
+          if (e.name !== "AbortError") setError(e.message);
+        });
+    }, 200);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [ready, account?.role, ownerId, page, pageSize, query, statusFilter, sort, resellerFilter, commerce, codeLookup, reload]);
+
   const admin = account?.role === "admin";
-  const available = items.filter((item) => item.status === "disponible");
+  const inventory = Boolean(admin && !ownerId);
   const visible = items.filter((item) => {
     const text = `${item.cartelId || ""} ${item.uniqueCode || item.id} ${item.title} ${item.ownerName || ""}`.toLowerCase();
     if (query.trim() && !text.includes(query.trim().toLowerCase())) return false;
@@ -161,67 +214,130 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
         </form>
       ) : null}
 
-      {admin && !ownerId ? (
-        <div className="card-panel stack">
-          <h2 style={{ marginTop: 0 }}>Asignar stock</h2>
-          <label className="label">
-            Revendedor
-            <select className="input" value={resellerId} onChange={(e) => setResellerId(e.target.value)}>
-              <option value="">Elegir</option>
-              {resellers.filter((user) => user.active).map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} · {user.email}
-                </option>
-              ))}
-            </select>
-          </label>
-          {available.length === 0 ? (
-            <p className="muted" style={{ margin: 0 }}>
-              No hay carteles disponibles para asignar.
-            </p>
-          ) : (
-            <div className="stack">
-              {available.map((item) => (
-                <label key={item.id} style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(item.id)}
-                    onChange={(e) =>
-                      setSelected((current) =>
-                        e.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id),
-                      )
-                    }
-                  />
-                  <span>{item.cartelId || item.uniqueCode || item.id}</span>
-                </label>
-              ))}
-            </div>
-          )}
-          <button
-            className="btn"
-            type="button"
-            disabled={selected.length === 0 || !resellerId}
-            onClick={async () => {
-              const res = await fetch("/api/qrs/assign", {
-                method: "POST",
+      {inventory ? (
+        <AdminInventory
+          items={items}
+          resellers={resellers}
+          query={query}
+          setQuery={(value) => {
+            setQuery(value);
+            setPage(1);
+          }}
+          statusFilter={statusFilter}
+          setStatusFilter={(value) => {
+            setStatusFilter(value);
+            setPage(1);
+          }}
+          sort={sort}
+          setSort={(value) => {
+            setSort(value);
+            setPage(1);
+          }}
+          resellerFilter={resellerFilter}
+          setResellerFilter={(value) => {
+            setResellerFilter(value);
+            setPage(1);
+          }}
+          commerce={commerce}
+          setCommerce={(value) => {
+            setCommerce(value);
+            setPage(1);
+          }}
+          page={page}
+          setPage={setPage}
+          pageSize={pageSize}
+          setPageSize={(value) => {
+            setPageSize(value);
+            setPage(1);
+          }}
+          total={total}
+          availableCount={availableCount}
+          selected={selected}
+          setSelected={setSelected}
+          resellerId={resellerId}
+          setResellerId={setResellerId}
+          bulkStatus={bulkStatus}
+          setBulkStatus={setBulkStatus}
+          openId={openId}
+          setOpenId={setOpenId}
+          codeLookup={codeLookup}
+          setCodeLookup={(value) => {
+            setCodeLookup(value);
+            setPage(1);
+          }}
+          onAssign={async () => {
+            const res = await fetch("/api/qrs/assign", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ resellerId, ids: selected }),
+            });
+            const data = (await res.json().catch(() => null)) as { error?: string; assigned?: number } | null;
+            if (!res.ok) {
+              setError(data?.error ?? "No se pudo asignar");
+              return;
+            }
+            if (!data?.assigned) {
+              setError("Solo se asignan carteles en estado Disponible.");
+              return;
+            }
+            setSelected([]);
+            setError(
+              data.assigned < selected.length
+                ? `Se asignaron ${data.assigned} de ${selected.length}. Solo entran los que están disponibles.`
+                : null,
+            );
+            await load();
+          }}
+          onBulkStatus={async () => {
+            for (const id of selected) {
+              const res = await fetch(`/api/qrs/${id}`, {
+                method: "PATCH",
                 headers: { "content-type": "application/json" },
-                body: JSON.stringify({ resellerId, ids: selected }),
+                body: JSON.stringify({ status: bulkStatus }),
               });
-              const data = (await res.json().catch(() => null)) as { error?: string; assigned?: number } | null;
               if (!res.ok) {
-                setError(data?.error ?? "No se pudo asignar");
+                setError("No se pudo cambiar el estado");
                 return;
               }
-              setSelected([]);
-              setError(null);
-              await load();
-            }}
-          >
-            Asignar {selected.length} cartel{selected.length === 1 ? "" : "es"}
-          </button>
-        </div>
+            }
+            setSelected([]);
+            setError(null);
+            await load();
+          }}
+          onBulkDelete={async () => {
+            if (!window.confirm(`¿Seguro que querés eliminar ${selected.length} cartel${selected.length === 1 ? "" : "es"}? Los QR dejarán de funcionar.`)) return;
+            for (const id of selected) {
+              const res = await fetch(`/api/qrs/${id}`, { method: "DELETE" });
+              if (!res.ok) {
+                setError("No se pudo eliminar");
+                return;
+              }
+            }
+            setSelected([]);
+            setError(null);
+            await load();
+          }}
+          onDelete={async (item: QrItem) => {
+            const label = item.cartelId || item.uniqueCode || item.id;
+            if (!window.confirm(`¿Seguro que querés eliminar ${label}? El QR dejará de funcionar.`)) return;
+            const res = await fetch(`/api/qrs/${item.id}`, { method: "DELETE" });
+            const data = (await res.json().catch(() => null)) as { error?: string } | null;
+            if (!res.ok) {
+              setError(data?.error ?? "No se pudo eliminar");
+              return;
+            }
+            setSelected((current) => current.filter((id) => id !== item.id));
+            setError(null);
+            await load();
+          }}
+          onSave={(id, body) => patch(id, body)}
+        />
       ) : null}
 
+      {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
+
+      {!inventory ? (
+      <>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
         <label className="label">
           Buscar
@@ -251,8 +367,6 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
           </label>
         ) : null}
       </div>
-
-      {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
 
       <div className="stack">
         {visible.length === 0 ? <p className="muted">No hay carteles para mostrar.</p> : null}
@@ -317,7 +431,341 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
           );
         })}
       </div>
+      </>
+      ) : null}
     </div>
+  );
+}
+
+function formatCreated(value?: string) {
+  if (!value) return "Sin fecha";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Sin fecha";
+  return date.toLocaleDateString("es-AR");
+}
+
+function AdminInventory({
+  items,
+  resellers,
+  query,
+  setQuery,
+  statusFilter,
+  setStatusFilter,
+  sort,
+  setSort,
+  resellerFilter,
+  setResellerFilter,
+  commerce,
+  setCommerce,
+  page,
+  setPage,
+  pageSize,
+  setPageSize,
+  total,
+  availableCount,
+  selected,
+  setSelected,
+  resellerId,
+  setResellerId,
+  bulkStatus,
+  setBulkStatus,
+  openId,
+  setOpenId,
+  codeLookup,
+  setCodeLookup,
+  onAssign,
+  onBulkStatus,
+  onBulkDelete,
+  onDelete,
+  onSave,
+}: {
+  items: QrItem[];
+  resellers: Reseller[];
+  query: string;
+  setQuery: (value: string) => void;
+  statusFilter: string;
+  setStatusFilter: (value: string) => void;
+  sort: string;
+  setSort: (value: string) => void;
+  resellerFilter: string;
+  setResellerFilter: (value: string) => void;
+  commerce: string;
+  setCommerce: (value: string) => void;
+  page: number;
+  setPage: (value: number) => void;
+  pageSize: number;
+  setPageSize: (value: number) => void;
+  total: number;
+  availableCount: number;
+  selected: string[];
+  setSelected: (value: string[] | ((current: string[]) => string[])) => void;
+  resellerId: string;
+  setResellerId: (value: string) => void;
+  bulkStatus: PosterStatus;
+  setBulkStatus: (value: PosterStatus) => void;
+  openId: string | null;
+  setOpenId: (value: string | null) => void;
+  codeLookup: string;
+  setCodeLookup: (value: string) => void;
+  onAssign: () => Promise<void>;
+  onBulkStatus: () => Promise<void>;
+  onBulkDelete: () => Promise<void>;
+  onDelete: (item: QrItem) => Promise<void>;
+  onSave: (id: string, body: Record<string, unknown>) => Promise<void>;
+}) {
+  const [codeDraft, setCodeDraft] = useState(codeLookup);
+  const pageIds = items.map((item) => item.id);
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+
+  return (
+    <>
+      <style>{`
+        .qr-admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+        @media (min-width: 720px) { .qr-admin-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (min-width: 1024px) { .qr-admin-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        @media (min-width: 1400px) { .qr-admin-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+      `}</style>
+      <div className="card-panel stack">
+        <h2 style={{ marginTop: 0 }}>Asignar stock</h2>
+        {availableCount === 0 ? (
+          <p className="muted" style={{ margin: 0 }}>
+            No hay carteles disponibles para asignar.
+          </p>
+        ) : (
+          <p className="muted" style={{ margin: 0 }}>
+            Hay {availableCount.toLocaleString("es-AR")} disponibles. Elegilos en la cuadrícula y asignalos a un revendedor.
+          </p>
+        )}
+        <label className="label">
+          Revendedor
+          <select className="input" value={resellerId} onChange={(e) => setResellerId(e.target.value)}>
+            <option value="">Elegir</option>
+            {resellers
+              .filter((user) => user.active)
+              .map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} · {user.email}
+                </option>
+              ))}
+          </select>
+        </label>
+        <button className="btn" type="button" disabled={selected.length === 0 || !resellerId} onClick={() => void onAssign()}>
+          Asignar {selected.length} cartel{selected.length === 1 ? "" : "es"}
+        </button>
+      </div>
+
+      <form
+        className="card-panel"
+        style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "end" }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setQuery("");
+          setCodeLookup(codeDraft.trim());
+        }}
+      >
+        <label className="label" style={{ flex: "1 1 220px", margin: 0 }}>
+          Buscar QR por código
+          <input
+            className="input"
+            value={codeDraft}
+            onChange={(e) => setCodeDraft(e.target.value)}
+            placeholder="CARTEL-000582 o el código único"
+          />
+        </label>
+        <button className="btn" type="submit">
+          Abrir
+        </button>
+        {codeLookup ? (
+          <button
+            className="btn secondary"
+            type="button"
+            onClick={() => {
+              setCodeDraft("");
+              setCodeLookup("");
+            }}
+          >
+            Ver todos
+          </button>
+        ) : null}
+      </form>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
+        <label className="label">
+          Buscar
+          <input
+            className="input"
+            value={query}
+            onChange={(e) => {
+              setCodeLookup("");
+              setCodeDraft("");
+              setQuery(e.target.value);
+            }}
+            placeholder="ID, código, comercio, revendedor o URL"
+          />
+        </label>
+        <label className="label">
+          Estado
+          <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="todos">Todos</option>
+            <option value="disponibles">Disponibles</option>
+            <option value="asignados">Asignados</option>
+            <option value="en-uso">En uso</option>
+            <option value="sin-asignar">Sin asignar</option>
+            {POSTER_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {STATUS_LABELS[status]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="label">
+          Revendedor
+          <select className="input" value={resellerFilter} onChange={(e) => setResellerFilter(e.target.value)}>
+            <option value="">Todos</option>
+            {resellers.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="label">
+          Comercio
+          <input className="input" value={commerce} onChange={(e) => setCommerce(e.target.value)} placeholder="Nombre del comercio" />
+        </label>
+        <label className="label">
+          Orden
+          <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option value="newest">Más nuevos</option>
+            <option value="oldest">Más antiguos</option>
+            <option value="id-asc">ID ascendente</option>
+            <option value="id-desc">ID descendente</option>
+            <option value="disponible-first">Disponibles primero</option>
+            <option value="asignado-first">Asignados primero</option>
+          </select>
+        </label>
+        <label className="label">
+          Por página
+          <select className="input" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+            {PAGE_SIZES.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+        <button
+          className="btn secondary"
+          type="button"
+          onClick={() => setSelected((current) => [...new Set([...current, ...pageIds])])}
+        >
+          Seleccionar todos los de esta página
+        </button>
+        <button className="btn secondary" type="button" onClick={() => setSelected([])}>
+          Deseleccionar todos
+        </button>
+        <span className="muted">{selected.length} seleccionados</span>
+      </div>
+
+      {selected.length > 0 ? (
+        <div className="card-panel" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "end" }}>
+          <label className="label" style={{ margin: 0 }}>
+            Cambiar estado
+            <select className="input" value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value as PosterStatus)}>
+              {POSTER_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="btn secondary" type="button" onClick={() => void onBulkStatus()}>
+            Aplicar estado
+          </button>
+          <button className="btn secondary" type="button" onClick={() => void onBulkDelete()}>
+            Eliminar selección
+          </button>
+        </div>
+      ) : null}
+
+      {items.length === 0 ? <p className="muted">No hay carteles para mostrar.</p> : null}
+      <div className="qr-admin-grid">
+        {items.map((item) => {
+          const code = item.uniqueCode || item.id;
+          const slug = publicSlug(item);
+          const editing = openId === item.id;
+          return (
+            <article key={item.id} className="card-panel stack" style={{ margin: 0 }}>
+              <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(item.id)}
+                  onChange={(e) =>
+                    setSelected((current) =>
+                      e.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id),
+                    )
+                  }
+                />
+                <strong>{item.cartelId || item.id}</strong>
+              </label>
+              <QrPreview id={slug} size={120} />
+              <p className="muted" style={{ margin: 0 }}>
+                {code}
+              </p>
+              <p style={{ margin: 0 }}>{STATUS_LABELS[item.status || "disponible"]}</p>
+              <p className="muted" style={{ margin: 0 }}>
+                {item.title || "Sin comercio"}
+              </p>
+              <p className="muted" style={{ margin: 0 }}>
+                {item.status === "disponible" ? "Sin revendedor" : item.ownerName || "Sin revendedor"}
+              </p>
+              <p className="muted" style={{ margin: 0 }}>
+                {formatCreated(item.createdAt)}
+              </p>
+              <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                {item.url ? (
+                  <a className="btn secondary" href={`/r/${slug}`} target="_blank" rel="noreferrer">
+                    Probar
+                  </a>
+                ) : null}
+                <button className="btn" type="button" onClick={() => downloadPng(slug)}>
+                  PNG
+                </button>
+                <button className="btn secondary" type="button" onClick={() => setOpenId(editing ? null : item.id)}>
+                  {editing ? "Cerrar" : "Configurar"}
+                </button>
+                <button className="btn secondary" type="button" onClick={() => void onDelete(item)}>
+                  Eliminar
+                </button>
+              </div>
+              {editing ? <PosterForm item={item} admin onSave={(body) => onSave(item.id, body)} /> : null}
+            </article>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+        <p className="muted" style={{ margin: 0 }}>
+          Mostrando {from.toLocaleString("es-AR")}–{to.toLocaleString("es-AR")} de {total.toLocaleString("es-AR")} QR
+        </p>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <button className="btn secondary" type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            Página anterior
+          </button>
+          <span>
+            {page} / {pages}
+          </span>
+          <button className="btn secondary" type="button" disabled={page >= pages} onClick={() => setPage(page + 1)}>
+            Página siguiente
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
