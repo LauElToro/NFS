@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { CountUp, Drawer } from "@/components/ui";
+import { pngFileName, zipStore } from "@/lib/qr-zip";
 import {
   DESTINATION_LABELS,
   POSTER_STATUSES,
@@ -51,12 +52,29 @@ function QrPreview({ id, size = 160 }: { id: string; size?: number }) {
   );
 }
 
+const QR_PNG = { width: 512, margin: 2 };
+
+async function qrPngBytes(slug: string) {
+  const dataUrl = await QRCode.toDataURL(`${window.location.origin}/r/${slug}`, QR_PNG);
+  const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 async function downloadPng(id: string) {
-  const dataUrl = await QRCode.toDataURL(`${window.location.origin}/r/${id}`, { width: 512, margin: 2 });
+  const dataUrl = await QRCode.toDataURL(`${window.location.origin}/r/${id}`, QR_PNG);
   const a = document.createElement("a");
   a.href = dataUrl;
   a.download = `cartel-${id}.png`;
   a.click();
+}
+
+function posterLabel(item: QrItem) {
+  const title = (item.title || "").trim();
+  if (title) return title;
+  return item.cartelId || item.uniqueCode || item.id;
 }
 
 const PAGE_SIZES = [10, 25, 50, 100];
@@ -599,7 +617,11 @@ function AdminInventory({
 }) {
   const [codeDraft, setCodeDraft] = useState(codeLookup);
   const [working, setWorking] = useState(false);
+  const [zipping, setZipping] = useState<{ done: number; total: number } | null>(null);
+  const known = useRef(new Map<string, QrItem>());
+  const zipLock = useRef(false);
   const pageIds = items.map((item) => item.id);
+  for (const item of items) known.current.set(item.id, item);
   const editingItem = items.find((item) => item.id === openId) ?? null;
   async function run(task: () => Promise<void>) {
     setWorking(true);
@@ -607,6 +629,53 @@ function AdminInventory({
       await task();
     } finally {
       setWorking(false);
+    }
+  }
+  async function downloadSelected() {
+    if (selected.length === 0 || zipLock.current) return;
+    zipLock.current = true;
+    const totalCount = selected.length;
+    setZipping({ done: 0, total: totalCount });
+    try {
+      const missing = selected.filter((id) => !known.current.has(id));
+      if (missing.length > 0) {
+        const res = await fetch("/api/qrs");
+        if (res.ok) {
+          const all = (await res.json()) as QrItem[];
+          for (const item of all) known.current.set(item.id, item);
+        }
+      }
+      const chosen = selected.map((id) => known.current.get(id)).filter((item): item is QrItem => Boolean(item));
+      if (chosen.length === 0) {
+        toast("No se pudieron preparar los QR seleccionados", "danger");
+        return;
+      }
+      const used = new Set<string>();
+      const files: { name: string; data: Uint8Array }[] = [];
+      for (const item of chosen) {
+        files.push({
+          name: pngFileName(posterLabel(item), used, item.cartelId || item.uniqueCode || item.id),
+          data: await qrPngBytes(publicSlug(item)),
+        });
+        setZipping({ done: files.length, total: totalCount });
+      }
+      const blob = new Blob([zipStore(files)], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `QR_seleccionados_${files.length}.zip`;
+      link.click();
+      URL.revokeObjectURL(url);
+      if (files.length < totalCount) {
+        toast(`Se descargaron ${files.length} de ${totalCount} QR`, "warn");
+      } else {
+        toast(`Se descargaron ${files.length} QR`);
+      }
+    } catch {
+      toast("No se pudo generar el ZIP", "danger");
+    } finally {
+      zipLock.current = false;
+      setZipping(null);
     }
   }
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -757,11 +826,30 @@ function AdminInventory({
         <button className="btn secondary" type="button" onClick={() => setSelected([])}>
           Deseleccionar todos
         </button>
+        <button
+          className="btn"
+          type="button"
+          disabled={Boolean(zipping) || selected.length === 0}
+          aria-busy={Boolean(zipping)}
+          title={selected.length === 0 ? "Seleccioná al menos un QR" : "Descargar los QR seleccionados en un ZIP"}
+          onClick={() => void downloadSelected()}
+        >
+          {zipping ? `Preparando ZIP… (${zipping.done}/${zipping.total})` : `Descargar seleccionados (${selected.length})`}
+        </button>
         <span className="muted">{selected.length} seleccionados</span>
       </div>
 
       {selected.length > 0 ? (
         <div className="bulk-bar card-panel">
+          <button
+            className="btn"
+            type="button"
+            disabled={Boolean(zipping)}
+            aria-busy={Boolean(zipping)}
+            onClick={() => void downloadSelected()}
+          >
+            {zipping ? `Preparando ZIP… (${zipping.done}/${zipping.total})` : `Descargar seleccionados (${selected.length})`}
+          </button>
           <label className="label" style={{ margin: 0 }}>
             Cambiar estado
             <select className="input" value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value as PosterStatus)}>
