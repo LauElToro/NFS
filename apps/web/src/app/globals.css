@@ -606,16 +606,6 @@ button.nav-link {
   50% { transform: translateY(-14px) rotate(2deg); }
 }
 
-.place-results { display: grid; gap: 0.65rem; }
-.place-hit {
-  display: grid;
-  gap: 0.2rem;
-  margin: 0;
-}
-.place-hit .btn { justify-self: start; margin-top: 0.45rem; }
-.place-note { margin: 0; color: #137333; font-weight: 650; }
-.place-note.bad { color: var(--danger); font-weight: 600; }
-
 @media print {
   .scene, body::before, body::after { display: none !important; }
 }

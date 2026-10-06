@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { BusinessSearch } from "@/components/BusinessSearch";
 import { CountUp, Drawer } from "@/components/ui";
 import { pngFileName, zipStore } from "@/lib/qr-zip";
 import {
@@ -983,13 +982,6 @@ function PosterForm({
       <p className="muted" style={{ margin: 0 }}>
         URL del QR: /r/{item.token || item.uniqueCode || item.id}
       </p>
-      <BusinessSearch
-        onApply={(place) => {
-          setTitle(place.name);
-          setDestinationType("google");
-          setUrl(place.reviewUrl);
-        }}
-      />
       <label className="label">
         Comercio
         <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nombre del comercio" />
