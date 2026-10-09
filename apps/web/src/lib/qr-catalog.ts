@@ -67,6 +67,9 @@ function persistable(item: QrItem): QrItem {
     assignedAt: item.assignedAt,
     soldAt: item.soldAt,
     history: item.history || [],
+    clientId: item.clientId,
+    clientMoves: item.clientMoves || [],
+    lastCheck: item.lastCheck,
   };
 }
 
@@ -165,6 +168,7 @@ export function recordDestination(
     cartelId: item.cartelId,
     url,
     history: nextHistory,
+    lastCheck: url !== (item.url || "") ? undefined : item.lastCheck,
     updatedAt: new Date().toISOString(),
   });
 }

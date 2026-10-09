@@ -43,6 +43,22 @@ export type UrlChange = {
   byName: string;
 };
 
+export type ClientMove = {
+  at: string;
+  fromId: string;
+  fromName: string;
+  toId: string;
+  toName: string;
+  byId: string;
+  byName: string;
+};
+
+export type PosterCheck = {
+  at: string;
+  result: "ok" | "error";
+  detail: string;
+};
+
 export type QrItem = {
   id: string;
   title: string;
@@ -61,6 +77,9 @@ export type QrItem = {
   assignedAt?: string;
   soldAt?: string;
   history?: UrlChange[];
+  clientId?: string;
+  clientMoves?: ClientMove[];
+  lastCheck?: PosterCheck;
 };
 
 const KEY = "nfs-qrs";
