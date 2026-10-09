@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { readCatalog } from "@/lib/qr-catalog";
+import { displayCode, findByPublicSlug } from "@/lib/poster-lookup";
+import { unconfiguredPosterHtml } from "@/lib/unconfigured-page";
 
 export const dynamic = "force-dynamic";
 
@@ -8,9 +10,7 @@ export async function GET(
   ctx: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await ctx.params;
-  const qr = (await readCatalog()).find((item) =>
-    item.token ? item.token === slug : item.id === slug || item.uniqueCode === slug,
-  );
+  const qr = findByPublicSlug(await readCatalog(), slug);
   if (!qr || qr.active === false || qr.status === "bloqueado") {
     return new NextResponse(
       `<!doctype html><html lang="es"><body style="font-family:system-ui;background:#111;color:#eee;display:grid;place-items:center;min-height:100vh"><div><h1>QR no disponible</h1><p>Este código fue eliminado o no existe.</p></div></body></html>`,
@@ -19,10 +19,10 @@ export async function GET(
   }
 
   if (!qr.url) {
-    return new NextResponse(
-      `<!doctype html><html lang="es"><body style="font-family:system-ui;background:#111;color:#eee;display:grid;place-items:center;min-height:100vh"><div><h1>Cartel sin destino</h1><p>Este cartel todavía no fue configurado.</p></div></body></html>`,
-      { status: 404, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
-    );
+    return new NextResponse(unconfiguredPosterHtml(displayCode(qr), qr.id), {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+    });
   }
 
   return NextResponse.redirect(qr.url, {

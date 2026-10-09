@@ -7,9 +7,11 @@ type ActionResult = { error?: string } | void;
 export function AuthForm({
   action,
   submitLabel,
+  next,
 }: {
   action: (form: FormData) => Promise<ActionResult>;
   submitLabel: string;
+  next?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -27,6 +29,7 @@ export function AuthForm({
         });
       }}
     >
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <label className="label">
         Email
         <input className="input" name="email" type="email" required />

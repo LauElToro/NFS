@@ -1,6 +1,8 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { findAccount } from "@/lib/accounts";
+import { safeConfigPath } from "@/lib/poster-lookup";
 import { getSession } from "@/lib/session";
 
 export default async function AppLayout({
@@ -9,7 +11,10 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) {
+    const next = safeConfigPath((await headers()).get("x-reviewsgo-path") || "");
+    redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
+  }
   let account;
   try {
     account = await findAccount(session.id);

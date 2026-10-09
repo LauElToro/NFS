@@ -4,6 +4,7 @@ import { DomainError } from "@nfs/domain";
 import { redirect } from "next/navigation";
 import { authenticate } from "@/lib/accounts";
 import { getContainer } from "@/lib/container";
+import { safeConfigPath } from "@/lib/poster-lookup";
 import { createSession, destroySession, requireSession } from "@/lib/session";
 
 function formString(form: FormData, key: string) {
@@ -19,7 +20,7 @@ export async function loginAction(form: FormData) {
   if (!user) return { error: "Credenciales inválidas" };
   if (!user.active) return { error: "Esta cuenta está desactivada" };
   await createSession({ id: user.id, email: user.email });
-  redirect("/app");
+  redirect(safeConfigPath(formString(form, "next")) || "/app");
 }
 
 export async function logoutAction() {
