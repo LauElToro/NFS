@@ -50,7 +50,7 @@ export function CheckoutForm({ loggedIn }: { loggedIn: boolean }) {
         {ready && !local ? (
           <div className="store-card">
             <p>No hay carteles en el carrito.</p>
-            <Link className="btn" href="/#tienda">Ver precios y packs</Link>
+            <Link className="btn" href="/tienda">Ver precios y packs</Link>
           </div>
         ) : null}
         {ready && local && !quote ? <p className="store-note">{error || "No se pudo calcular el precio."}</p> : null}
@@ -124,7 +124,7 @@ export function CheckoutForm({ loggedIn }: { loggedIn: boolean }) {
                   {submitting ? "Registrando pedido..." : "Confirmar pedido"}
                 </button>
               )}
-              <Link href={order ? (loggedIn ? "/app/tienda" : "/#tienda") : "/carrito"}>{order ? "Volver a la tienda" : "Volver al carrito"}</Link>
+              <Link href={order ? (loggedIn ? "/app/tienda" : "/tienda") : "/carrito"}>{order ? "Volver a la tienda" : "Volver al carrito"}</Link>
             </section>
           </form>
         ) : null}

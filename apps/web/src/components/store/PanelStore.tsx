@@ -72,7 +72,7 @@ export function PanelStore() {
       {desk ? (
         <>
           <div className="toolbar">
-            <Link className="btn" href="/#tienda">Ver la tienda pública</Link>
+            <Link className="btn" href="/tienda">Ver la tienda pública</Link>
             <Link className="btn secondary" href="/carrito">Ver carrito</Link>
           </div>
           {desk.packs.length === 0 ? (

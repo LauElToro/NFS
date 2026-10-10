@@ -63,7 +63,7 @@ export function CartPage({ loggedIn }: { loggedIn: boolean }) {
         {!quote ? (
           <div className="store-card">
             <p>El carrito está vacío.</p>
-            <Link className="btn" href="/#tienda">Ver precios y packs</Link>
+            <Link className="btn" href="/tienda">Ver precios y packs</Link>
           </div>
         ) : (
           <div className="store-card store-cart-line">

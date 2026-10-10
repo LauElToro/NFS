@@ -37,9 +37,9 @@ export function StoreFrame({
         </button>
         <nav className={open ? "open" : ""} aria-label="Tienda">
           <Link href="/#inicio" onClick={() => setOpen(false)}>Inicio</Link>
-          <Link href="/#tienda" onClick={() => setOpen(false)}>Tienda</Link>
-          <Link href="/#como-funciona" onClick={() => setOpen(false)}>Cómo funciona</Link>
-          <Link href="/#contacto" onClick={() => setOpen(false)}>Contacto</Link>
+          <Link href="/tienda" onClick={() => setOpen(false)}>Tienda</Link>
+          <Link href="/tienda#como-funciona" onClick={() => setOpen(false)}>Cómo funciona</Link>
+          <Link href="/tienda#contacto" onClick={() => setOpen(false)}>Contacto</Link>
         </nav>
         <div className="store-tools">
           <Link className="store-panel" href={loggedIn ? "/app" : "/login"}>
