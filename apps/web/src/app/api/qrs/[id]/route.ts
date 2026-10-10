@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentAccount } from "@/lib/access";
 import { ADMIN_USER_ID, readCatalog, recordDestination, writeCatalog } from "@/lib/qr-catalog";
-import { POSTER_STATUSES, type DestinationType, type PosterStatus } from "@/lib/qr-store";
+import { POSTER_STATUSES, reviewUrlFromPlaceId, placeIdFromReviewUrl, type DestinationType, type PosterStatus } from "@/lib/qr-store";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +50,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
     next = recordDestination(next, body.restoreUrl, account, { title, destinationType });
   } else if (body.url !== undefined) {
-    const url = body.url.trim();
+    let url = body.url.trim();
+    if (destinationType === "google") {
+      url = reviewUrlFromPlaceId(placeIdFromReviewUrl(url));
+      if (!url) return NextResponse.json({ error: "Ingresá el Place ID del comercio." }, { status: 400 });
+    }
     if (!isHttpUrl(url)) return NextResponse.json({ error: "La URL no es válida" }, { status: 400 });
     const status =
       account.role !== "admin" && !["vendido", "activo", "bloqueado"].includes(current.status || "")

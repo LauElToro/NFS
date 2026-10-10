@@ -11,6 +11,21 @@ export const DESTINATION_LABELS: Record<DestinationType, string> = {
   otro: "Otro enlace",
 };
 
+export const GOOGLE_REVIEW_PREFIX = "https://search.google.com/local/writereview?placeid=";
+const PLACE_ID = /^[A-Za-z0-9_-]{10,255}$/;
+
+export function placeIdFromReviewUrl(value: string) {
+  const url = value.trim();
+  if (!url.startsWith(GOOGLE_REVIEW_PREFIX)) return "";
+  const id = url.slice(GOOGLE_REVIEW_PREFIX.length);
+  return PLACE_ID.test(id) ? id : "";
+}
+
+export function reviewUrlFromPlaceId(placeId: string) {
+  const id = placeId.trim();
+  return PLACE_ID.test(id) ? `${GOOGLE_REVIEW_PREFIX}${id}` : "";
+}
+
 export const POSTER_STATUSES = [
   "disponible",
   "asignado",

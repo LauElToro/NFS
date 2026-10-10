@@ -6,8 +6,11 @@ import { CountUp, Drawer } from "@/components/ui";
 import { pngFileName, zipStore } from "@/lib/qr-zip";
 import {
   DESTINATION_LABELS,
+  GOOGLE_REVIEW_PREFIX,
   POSTER_STATUSES,
   STATUS_LABELS,
+  placeIdFromReviewUrl,
+  reviewUrlFromPlaceId,
   type DestinationType,
   type PosterStatus,
   type QrItem,
@@ -965,18 +968,50 @@ function PosterForm({
   admin: boolean;
   onSave: (body: Record<string, unknown>) => Promise<void>;
 }) {
+  const initialType = item.destinationType || "google";
+  const initialPlaceId = placeIdFromReviewUrl(item.url || "");
   const [title, setTitle] = useState(item.title);
-  const [url, setUrl] = useState(item.url);
-  const [destinationType, setDestinationType] = useState<DestinationType>(item.destinationType || "google");
+  const [url, setUrl] = useState(initialType === "google" ? reviewUrlFromPlaceId(initialPlaceId) : item.url);
+  const [manualUrl, setManualUrl] = useState(initialType === "google" && initialPlaceId ? "" : item.url);
+  const [placeId, setPlaceId] = useState(initialPlaceId);
+  const [destinationType, setDestinationType] = useState<DestinationType>(initialType);
   const [status, setStatus] = useState<PosterStatus>(item.status || "disponible");
+  const [error, setError] = useState("");
+  const googleUrl = reviewUrlFromPlaceId(placeId);
+
+  function selectType(next: DestinationType) {
+    setError("");
+    if (next === "google") {
+      if (destinationType !== "google") setManualUrl(url);
+      const id = placeIdFromReviewUrl(url) || placeId;
+      setPlaceId(id);
+      setUrl(reviewUrlFromPlaceId(id));
+    } else if (destinationType === "google") {
+      setUrl(manualUrl);
+    }
+    setDestinationType(next);
+  }
+
+  async function submit(extra: Record<string, unknown> = {}) {
+    const destination = destinationType === "google" ? googleUrl : url.trim();
+    if (destinationType === "google" && !destination) {
+      setError("Ingresá el Place ID del comercio.");
+      return;
+    }
+    if (!isHttpUrl(destination)) {
+      setError("Ingresá una URL de destino que empiece con https://");
+      return;
+    }
+    setError("");
+    await onSave({ title, url: destination, destinationType, ...extra });
+  }
 
   return (
     <form
       className="stack"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        if (!isHttpUrl(url.trim())) return;
-        await onSave({ title, url, destinationType, ...(admin ? { status } : {}) });
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit(admin ? { status } : {});
       }}
     >
       <p className="muted" style={{ margin: 0 }}>
@@ -988,7 +1023,7 @@ function PosterForm({
       </label>
       <label className="label">
         Tipo de destino
-        <select className="input" value={destinationType} onChange={(e) => setDestinationType(e.target.value as DestinationType)}>
+        <select className="input" value={destinationType} onChange={(e) => selectType(e.target.value as DestinationType)}>
           {DESTINATIONS.map(([id, label]) => (
             <option key={id} value={id}>
               {label}
@@ -996,10 +1031,34 @@ function PosterForm({
           ))}
         </select>
       </label>
-      <label className="label">
-        URL de destino
-        <input className="input" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." required />
-      </label>
+      {destinationType === "google" ? (
+        <>
+          <label className="label">
+            Place ID del comercio
+            <input
+              className="input"
+              value={placeId}
+              onChange={(e) => {
+                const value = e.target.value;
+                setPlaceId(value);
+                setUrl(reviewUrlFromPlaceId(value));
+                setError("");
+              }}
+              placeholder="Place ID del comercio"
+              required
+            />
+          </label>
+          <p className="muted" style={{ margin: 0, wordBreak: "break-all" }}>
+            {googleUrl || GOOGLE_REVIEW_PREFIX}
+          </p>
+        </>
+      ) : (
+        <label className="label">
+          URL de destino
+          <input className="input" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." required />
+        </label>
+      )}
+      {error ? <p style={{ color: "var(--danger)", margin: 0 }}>{error}</p> : null}
       {admin ? (
         <label className="label">
           Estado
@@ -1017,7 +1076,7 @@ function PosterForm({
           Guardar cambios
         </button>
         {!admin ? (
-          <button className="btn secondary" type="button" onClick={() => onSave({ title, url, destinationType, sale: true })}>
+          <button className="btn secondary" type="button" onClick={() => void submit({ sale: true })}>
             Registrar venta
           </button>
         ) : null}
