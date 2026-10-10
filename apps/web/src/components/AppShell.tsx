@@ -22,6 +22,7 @@ const ICONS = {
   people: "M16 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM20 20v-1a3.5 3.5 0 0 0-2.5-3.35M16.5 4.2a3 3 0 0 1 0 5.6",
   chart: "M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3",
   folder: "M3 7h6l2 2h10v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z",
+  store: "M6 7h15l-1.6 8.2a1 1 0 0 1-1 .8H9.2a1 1 0 0 1-1-.8L6.2 4H3",
   bell: "M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 19a2 2 0 0 0 4 0",
   help: "M12 18h.01M9.1 9a3 3 0 1 1 3.9 2.8c-.8.4-1 1-1 1.7V14",
 };
@@ -90,12 +91,14 @@ export function AppShell({
           { href: "/app#carteles", label: "Carteles", icon: ICONS.qr, match: pathname === "/app" && hash === "#carteles" },
           { href: "/app#asignar", label: "Asignaciones", icon: ICONS.people, match: pathname === "/app" && hash === "#asignar" },
           { href: "/app/clientes", label: "Clientes y negocios", icon: ICONS.folder, match: pathname.startsWith("/app/clientes") },
+          { href: "/app/tienda", label: "Tienda", icon: ICONS.store, match: pathname.startsWith("/app/tienda") },
           { href: "/app/resellers", label: "Revendedores", icon: ICONS.people, match: pathname.startsWith("/app/resellers") },
           { href: "/app/kpis", label: "KPIs", icon: ICONS.chart, match: pathname.startsWith("/app/kpis") },
         ]
       : [
           { href: "/app", label: "Mis carteles", icon: ICONS.qr, match: pathname === "/app" },
           { href: "/app/clientes", label: "Clientes y negocios", icon: ICONS.folder, match: pathname.startsWith("/app/clientes") },
+          { href: "/app/tienda", label: "Tienda", icon: ICONS.store, match: pathname.startsWith("/app/tienda") },
         ];
 
   function search(event: FormEvent) {
@@ -216,6 +219,7 @@ export function AppShell({
               <p className="muted" style={{ margin: 0 }}>Solo se pueden asignar carteles en estado Disponible.</p>
               <p className="muted" style={{ margin: 0 }}>El revendedor edita el destino de los carteles que recibió, salvo que estén bloqueados.</p>
               <p className="muted" style={{ margin: 0 }}>En Clientes y negocios cada local tiene su carpeta. Asignar carteles no crea códigos nuevos.</p>
+              <p className="muted" style={{ margin: 0 }}>La Tienda vende carteles por cantidad. El pago no se marca como aprobado sin un proveedor de cobros.</p>
             </div>
           </aside>
         </div>

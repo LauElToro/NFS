@@ -1,4 +1,4 @@
-import { quotePosters } from "./store-pricing";
+import { MAX_POSTERS, quotePosters } from "./store-pricing";
 
 const KEY = "reviewsgo-cart";
 export const CART_EVENT = "reviewsgo-cart";
@@ -23,7 +23,7 @@ export function writeCartQuantity(quantity: number) {
 }
 
 export function addPackQuantity(packQuantity: number) {
-  const next = Math.min(100, readCartQuantity() + packQuantity);
+  const next = Math.min(MAX_POSTERS, readCartQuantity() + packQuantity);
   return writeCartQuantity(next);
 }
 

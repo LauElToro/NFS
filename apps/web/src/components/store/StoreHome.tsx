@@ -1,15 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { StoreFrame } from "./StoreFrame";
+import { useEffect, useState } from "react";
 import { addPackQuantity } from "@/lib/store-cart";
-import { STORE_PACKS, formatArs } from "@/lib/store-pricing";
+import { isStorePack, STORE_PACKS, formatArs, type StorePack } from "@/lib/store-pricing";
 
 export function StoreHome({ loggedIn }: { loggedIn: boolean }) {
   const [filter, setFilter] = useState<"todos" | "minorista" | "mayorista">("todos");
   const [notice, setNotice] = useState("");
-  const packs = STORE_PACKS.filter((pack) => {
+  const [catalog, setCatalog] = useState<StorePack[]>(STORE_PACKS);
+  useEffect(() => {
+    fetch("/api/store/catalog")
+      .then(async (res) => (res.ok ? res.json() : null))
+      .then((data: { packs?: unknown[] } | null) => {
+        const packs = data?.packs?.filter(isStorePack);
+        if (packs && packs.length > 0) setCatalog(packs);
+      })
+      .catch(() => undefined);
+  }, []);
+  const packs = catalog.filter((pack) => {
     if (filter === "minorista") return !pack.wholesale;
     if (filter === "mayorista") return pack.wholesale;
     return true;

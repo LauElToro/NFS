@@ -6,9 +6,13 @@ import { StoreFrame } from "./StoreFrame";
 import { clearCart, readCartQuantity, writeCartQuantity } from "@/lib/store-cart";
 import { formatArs, quotePosters } from "@/lib/store-pricing";
 
+type ServerQuote = { quantity: number; unit: number; total: number; wholesale: boolean };
+
 export function CartPage({ loggedIn }: { loggedIn: boolean }) {
   const [quantity, setQuantity] = useState(0);
   const [draft, setDraft] = useState("1");
+  const [server, setServer] = useState<ServerQuote | null>(null);
+  const [quoteError, setQuoteError] = useState("");
 
   useEffect(() => {
     const current = readCartQuantity();
@@ -16,7 +20,35 @@ export function CartPage({ loggedIn }: { loggedIn: boolean }) {
     setDraft(String(current || 1));
   }, []);
 
-  const quote = quotePosters(quantity);
+  useEffect(() => {
+    if (!quantity) {
+      setServer(null);
+      return;
+    }
+    let active = true;
+    fetch("/api/store/quote", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ quantity }),
+    })
+      .then(async (res) => {
+        const data = (await res.json()) as ServerQuote & { error?: string };
+        if (!res.ok) throw new Error(data.error || "No se pudo calcular el precio");
+        if (active) {
+          setServer(data);
+          setQuoteError("");
+        }
+      })
+      .catch((reason: Error) => {
+        if (active) setQuoteError(reason.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [quantity]);
+
+  const local = quotePosters(quantity);
+  const quote = server && server.quantity === quantity ? server : local;
 
   function applyQuantity(value: number) {
     const next = writeCartQuantity(value);
@@ -58,6 +90,7 @@ export function CartPage({ loggedIn }: { loggedIn: boolean }) {
                   }}
                 />
               </label>
+              {quoteError ? <p className="store-note">{quoteError}</p> : null}
               <p>Precio unitario: {formatArs(quote.unit)}</p>
               <p>Subtotal: {formatArs(quote.total)}</p>
               <strong>Total: {formatArs(quote.total)}</strong>
