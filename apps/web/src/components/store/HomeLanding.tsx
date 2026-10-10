@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
 import { StoreFrame } from "./StoreFrame";
 
 function Icon({ d }: { d: string }) {
@@ -33,13 +32,6 @@ const BENEFITS = [
 export function HomeLanding({ loggedIn }: { loggedIn: boolean }) {
   const accountHref = loggedIn ? "/app" : "/login";
 
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash === "#tienda" || hash === "#como-funciona" || hash === "#contacto") {
-      window.location.replace(`/tienda${hash === "#tienda" ? "" : hash}`);
-    }
-  }, []);
-
   return (
     <StoreFrame loggedIn={loggedIn}>
       <main>
@@ -52,7 +44,6 @@ export function HomeLanding({ loggedIn }: { loggedIn: boolean }) {
             </p>
             <div className="store-actions">
               <Link className="btn" href={accountHref}>Acceder a mi cuenta</Link>
-              <Link className="btn secondary" href="/tienda">Conocer nuestros productos</Link>
             </div>
           </div>
           <div className="home-photo">
