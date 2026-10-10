@@ -57,7 +57,7 @@ export function StoreHome({ loggedIn }: { loggedIn: boolean }) {
             </div>
           </div>
           <p className="muted">Cuantos más carteles, menor es el precio por unidad. El total se calcula con la cantidad del carrito.</p>
-          {notice ? <p className="store-note">{notice} <Link href="/carrito">Ver carrito</Link></p> : null}
+          {notice ? <p className="store-note">{notice}</p> : null}
           <div className="store-grid">
             {packs.map((pack) => (
               <article key={pack.id} className="store-card">
@@ -71,7 +71,7 @@ export function StoreHome({ loggedIn }: { loggedIn: boolean }) {
                   type="button"
                   onClick={() => {
                     const quantity = addPackQuantity(pack.quantity);
-                    setNotice(quantity ? `Agregado al carrito: ${quantity} cartel${quantity === 1 ? "" : "es"}.` : "No se pudo agregar.");
+                    setNotice(quantity ? `Carrito actualizado: ${quantity} cartel${quantity === 1 ? "" : "es"}.` : "No se pudo agregar.");
                   }}
                 >
                   {pack.wholesale ? "Comprar pack" : "Comprar ahora"}
