@@ -758,6 +758,22 @@ body:has(.store-page)::after { display: none !important; }
   .store-grid, .store-benefits, .store-steps, .store-benefits.home-benefits, .store-cart-line { grid-template-columns: 1fr; }
 }
 
+.review-results { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
+.review-results button {
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+  cursor: pointer;
+  color: inherit;
+}
+.review-results button strong, .review-results button span { display: block; }
+.review-results button span { color: var(--muted); font-size: 0.86rem; margin-top: 0.15rem; }
+.review-results button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.16); }
+.review-code { margin: 0; word-break: break-all; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86rem; }
+
 @media print {
   .scene, body::before, body::after { display: none !important; }
 }
