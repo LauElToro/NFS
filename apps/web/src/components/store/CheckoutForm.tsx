@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { StoreFrame } from "./StoreFrame";
 import { readCartQuantity } from "@/lib/store-cart";
 import { formatArs, quotePosters } from "@/lib/store-pricing";
-import { buildOrderMessage, whatsAppOrderUrl, type WhatsAppOrder } from "@/lib/store-whatsapp";
+import { buildOrderMessage, isWhatsAppOrderUrl, whatsAppOrderUrl, type WhatsAppOrder } from "@/lib/store-whatsapp";
 
 type Quote = { quantity: number; unit: number; total: number; wholesale: boolean; listUnit?: number; savings?: number };
 type Draft = {
@@ -61,7 +61,7 @@ function requestId() {
 function loadSaved(currentRequest: string): SavedOrder | null {
   try {
     const parsed = JSON.parse(window.sessionStorage.getItem(SAVED_KEY) || "") as SavedOrder;
-    if (parsed.requestId !== currentRequest || !parsed.id || !parsed.url.startsWith("https://wa.me/")) return null;
+    if (parsed.requestId !== currentRequest || !parsed.id || !isWhatsAppOrderUrl(parsed.url)) return null;
     return parsed;
   } catch {
     return null;
