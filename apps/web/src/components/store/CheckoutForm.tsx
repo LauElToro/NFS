@@ -24,6 +24,9 @@ type Field = keyof Draft;
 
 const DRAFT_KEY = "reviewsgo-checkout";
 const REQUEST_KEY = "reviewsgo-order-request";
+const SAVED_KEY = "reviewsgo-whatsapp-order";
+
+type SavedOrder = { requestId: string; id: string; url: string };
 const EMPTY: Draft = {
   name: "",
   business: "",
@@ -55,6 +58,16 @@ function requestId() {
   return next;
 }
 
+function loadSaved(currentRequest: string): SavedOrder | null {
+  try {
+    const parsed = JSON.parse(window.sessionStorage.getItem(SAVED_KEY) || "") as SavedOrder;
+    if (parsed.requestId !== currentRequest || !parsed.id || !parsed.url.startsWith("https://wa.me/")) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 function validate(draft: Draft) {
   const errors: Partial<Record<Field, string>> = {};
   if (draft.name.trim().length < 2) errors.name = "Ingresá tu nombre y apellido.";
@@ -77,11 +90,13 @@ export function CheckoutForm({ loggedIn }: { loggedIn: boolean }) {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<Field, string>>>({});
   const [step, setStep] = useState<"form" | "review">("form");
   const [submitting, setSubmitting] = useState(false);
-  const [opened, setOpened] = useState("");
+  const [saved, setSaved] = useState<SavedOrder | null>(null);
+  const [whatsAppOpened, setWhatsAppOpened] = useState(false);
   const pending = useRef(false);
 
   useEffect(() => {
     setDraft(loadDraft());
+    setSaved(loadSaved(requestId()));
     const current = readCartQuantity();
     setQuantity(current);
     if (!current) {
@@ -112,13 +127,29 @@ export function CheckoutForm({ loggedIn }: { loggedIn: boolean }) {
   function update(field: Field, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: undefined }));
-    setOpened("");
+    setSaved(null);
+    setWhatsAppOpened(false);
+    window.sessionStorage.removeItem(SAVED_KEY);
+  }
+
+  function openWhatsApp(url: string) {
+    const popup = window.open(url, "_blank", "noopener,noreferrer");
+    if (popup) setWhatsAppOpened(true);
+    else setError("El navegador bloqueó la ventana. Usá Continuar por WhatsApp.");
   }
 
   async function confirm() {
     if (pending.current || !shown) return;
-    const popup = window.open("about:blank", "_blank");
     pending.current = true;
+    const currentRequest = requestId();
+    const existing = saved?.requestId === currentRequest ? saved : loadSaved(currentRequest);
+    if (existing) {
+      setSaved(existing);
+      openWhatsApp(existing.url);
+      pending.current = false;
+      return;
+    }
+    const popup = window.open("about:blank", "_blank");
     setSubmitting(true);
     setError("");
     try {
@@ -126,7 +157,7 @@ export function CheckoutForm({ loggedIn }: { loggedIn: boolean }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          requestId: requestId(),
+          requestId: currentRequest,
           quantity: shown.quantity,
           name: draft.name,
           business: draft.business,
@@ -142,10 +173,20 @@ export function CheckoutForm({ loggedIn }: { loggedIn: boolean }) {
       });
       const data = (await res.json()) as { error?: string; order?: WhatsAppOrder };
       if (!res.ok || !data.order) throw new Error(data.error || "No se pudo registrar el pedido");
-      const url = whatsAppOrderUrl(buildOrderMessage(data.order));
-      setOpened(url);
-      if (popup) popup.location.href = url;
-      else setError("El navegador bloqueó la ventana. Usá el botón Abrir WhatsApp.");
+      const next = {
+        requestId: currentRequest,
+        id: data.order.id,
+        url: whatsAppOrderUrl(buildOrderMessage(data.order)),
+      };
+      window.sessionStorage.setItem(SAVED_KEY, JSON.stringify(next));
+      setSaved(next);
+      if (popup && !popup.closed) {
+        popup.location.href = next.url;
+        setWhatsAppOpened(true);
+      } else {
+        popup?.close();
+        setError("El pedido ya quedó registrado. Usá Continuar por WhatsApp para abrir el mensaje.");
+      }
     } catch (reason) {
       popup?.close();
       setError(reason instanceof Error ? reason.message : "No se pudo registrar el pedido");
@@ -235,18 +276,21 @@ export function CheckoutForm({ loggedIn }: { loggedIn: boolean }) {
             <p>Código postal: {draft.zip.trim() || "—"}</p>
             <p>Notas: {draft.notes.trim() || "Sin observaciones."}</p>
             <p className="muted">El pago y el costo del envío se coordinan por WhatsApp. El pedido queda pendiente de coordinación: no está pago ni confirmado.</p>
-            {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
-            {opened ? (
+            {saved ? (
               <p className="store-note">
-                WhatsApp se abrió con el mensaje escrito. Falta que pulses Enviar. El carrito sigue guardado por si volvés sin enviarlo.
+                Pedido {saved.id} registrado. Quedó pendiente de coordinación: el pago no está confirmado. {whatsAppOpened ? "WhatsApp se abrió con el mensaje escrito. Falta que pulses Enviar." : "El mensaje está listo: falta abrirlo y pulsar Enviar."} El carrito sigue guardado.
               </p>
             ) : null}
+            {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
             <div className="store-actions">
-              <button className="btn secondary" type="button" onClick={() => { setStep("form"); setOpened(""); }}>Volver y modificar pedido</button>
-              <button className="btn" type="button" disabled={submitting} onClick={() => void confirm()}>
-                {submitting ? "Preparando WhatsApp..." : "Confirmar pedido por WhatsApp"}
-              </button>
-              {opened ? <a className="btn secondary" href={opened} target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a> : null}
+              <button className="btn secondary" type="button" onClick={() => setStep("form")}>Volver y modificar pedido</button>
+              {saved ? (
+                <a className="btn" href={saved.url} target="_blank" rel="noopener noreferrer">Continuar por WhatsApp</a>
+              ) : (
+                <button className="btn" type="button" disabled={submitting} onClick={() => void confirm()}>
+                  {submitting ? "Preparando WhatsApp..." : "Confirmar pedido por WhatsApp"}
+                </button>
+              )}
             </div>
           </section>
         ) : null}

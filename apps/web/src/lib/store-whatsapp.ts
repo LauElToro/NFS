@@ -1,8 +1,8 @@
 import { formatArs } from "./store-pricing";
 
 /**
- * Número comercial de ReviewsGO, sin +, espacios ni guiones.
- * Sale de https://wa.link/463p24 → https://api.whatsapp.com/send?phone=541132547765
+ * Número comercial de ReviewsGO, con código de país, sin +, espacios ni guiones.
+ * Sale de https://wa.link/463p24 (+54 11 3254-7765).
  * Para cambiarlo, reemplazá solo este valor.
  */
 export const REVIEWSGO_WHATSAPP_PHONE = "541132547765";
@@ -54,5 +54,5 @@ export function buildOrderMessage(order: WhatsAppOrder) {
 }
 
 export function whatsAppOrderUrl(message: string) {
-  return `https://api.whatsapp.com/send?phone=${REVIEWSGO_WHATSAPP_PHONE}&text=${encodeURIComponent(message)}`;
+  return `https://wa.me/${REVIEWSGO_WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
 }
