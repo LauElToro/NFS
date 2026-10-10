@@ -8,18 +8,22 @@ export const FULFILLMENT_LABELS: Record<Fulfillment, string> = {
   entregado: "Entregado",
 };
 
+export type DeliveryMode = "envio" | "retiro";
+
 export type StoreOrder = {
   id: string;
   requestId: string;
   createdAt: string;
   updatedAt: string;
-  buyer: { name: string; email: string; phone: string };
-  shipping: { street: string; city: string; state: string; zip: string };
+  buyer: { name: string; email: string; phone: string; business?: string };
+  shipping: { street: string; city: string; state: string; zip: string; mode?: DeliveryMode };
+  notes?: string;
   quantity: number;
   unit: number;
   total: number;
   wholesale: boolean;
   paymentStatus: "sin_medio_de_pago";
+  coordination?: "pendiente";
   fulfillment: Fulfillment;
 };
 
@@ -32,26 +36,43 @@ function text(value: unknown, min: number, max: number) {
   return clean;
 }
 
+function loose(value: unknown, max: number) {
+  if (typeof value !== "string" || value.trim() === "") return "";
+  const clean = value.trim().replace(/\s+/g, " ");
+  if (clean.length > max) return null;
+  return clean;
+}
+
+function optionalText(value: unknown, min: number, max: number) {
+  if (typeof value !== "string" || value.trim() === "") return "";
+  return text(value, min, max);
+}
+
 export function parseOrderInput(body: unknown) {
   if (!body || typeof body !== "object") return null;
   const input = body as Record<string, unknown>;
   const requestId = typeof input.requestId === "string" ? input.requestId.trim() : "";
   const name = text(input.name, 2, 80);
-  const email = text(input.email, 5, 120);
   const phone = text(input.phone, 6, 30);
-  const street = text(input.street, 4, 120);
   const city = text(input.city, 2, 80);
   const state = text(input.state, 2, 80);
-  const zip = text(input.zip, 3, 12);
+  const mode = input.mode === "retiro" || input.mode === "envio" ? input.mode : null;
+  const business = optionalText(input.business, 2, 80);
+  const email = optionalText(input.email, 5, 120);
+  const zip = optionalText(input.zip, 3, 12);
+  const notes = typeof input.notes === "string" ? input.notes.trim().slice(0, 500) : "";
+  const street = mode === "envio" ? text(input.street, 4, 120) : loose(input.street, 120);
   const quantity = Number(input.quantity);
-  if (!REQUEST_ID.test(requestId) || !name || !email || !phone || !street || !city || !state || !zip) return null;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  if (!REQUEST_ID.test(requestId) || !name || !phone || !city || !state || !mode || street == null) return null;
+  if (business == null || email == null || zip == null) return null;
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
   if (!Number.isInteger(quantity)) return null;
   return {
     requestId,
     quantity,
-    buyer: { name, email, phone },
-    shipping: { street, city, state, zip },
+    notes,
+    buyer: { name, email, phone, business },
+    shipping: { street: street || "", city, state, zip, mode },
   };
 }
 

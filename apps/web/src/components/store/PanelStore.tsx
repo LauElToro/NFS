@@ -17,11 +17,13 @@ const FULFILLMENT_LABELS: Record<Fulfillment, string> = {
 type StoreOrder = {
   id: string;
   createdAt: string;
-  buyer: { name: string; email: string; phone: string };
-  shipping: { street: string; city: string; state: string; zip: string };
+  buyer: { name: string; email: string; phone: string; business?: string };
+  shipping: { street: string; city: string; state: string; zip: string; mode?: "envio" | "retiro" };
+  notes?: string;
   quantity: number;
   unit: number;
   total: number;
+  coordination?: "pendiente";
   fulfillment: Fulfillment;
 };
 
@@ -194,7 +196,7 @@ export function PanelStore() {
                       <td>{item.buyer.name}</td>
                       <td>{item.quantity}</td>
                       <td>{formatArs(item.total)}</td>
-                      <td>Sin medio de pago</td>
+                      <td>{item.coordination === "pendiente" ? "Pendiente de coordinación" : "Sin medio de pago"}</td>
                       <td>{FULFILLMENT_LABELS[item.fulfillment]}</td>
                     </tr>
                   ))}
@@ -206,15 +208,18 @@ export function PanelStore() {
             <div className="stack">
               <h3 style={{ margin: 0 }}>{order.id}</h3>
               <p style={{ margin: 0 }}>
-                {order.buyer.name} · {order.buyer.email} · {order.buyer.phone}
+                {order.buyer.name}{order.buyer.business ? ` · ${order.buyer.business}` : ""} · {order.buyer.email || "Sin email"} · {order.buyer.phone}
               </p>
               <p className="muted" style={{ margin: 0 }}>
-                {order.shipping.street}, {order.shipping.city}, {order.shipping.state}, CP {order.shipping.zip}
+                {order.shipping.mode === "retiro" ? "Retiro" : "Envío"} · {order.shipping.street || "Sin dirección"}, {order.shipping.city}, {order.shipping.state}{order.shipping.zip ? `, CP ${order.shipping.zip}` : ""}
               </p>
+              {order.notes ? <p style={{ margin: 0 }}>Notas: {order.notes}</p> : null}
               <p style={{ margin: 0 }}>
                 {order.quantity} × {formatArs(order.unit)} · Total {formatArs(order.total)}
               </p>
-              <p style={{ margin: 0 }}>Pago: sin confirmar. Falta un proveedor de pagos.</p>
+              <p style={{ margin: 0 }}>
+                {order.coordination === "pendiente" ? "Pendiente de coordinación por WhatsApp. El pago no está confirmado." : "Pago: sin confirmar. Falta un proveedor de pagos."}
+              </p>
               <label className="label">
                 Estado de preparación y entrega
                 <select

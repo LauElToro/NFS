@@ -54,11 +54,14 @@ export function unitPrice(quantity: number, tiers: PriceTier[] = DEFAULT_TIERS) 
 export function quotePosters(quantity: number, tiers: PriceTier[] = DEFAULT_TIERS) {
   const unit = unitPrice(quantity, tiers);
   if (unit == null) return null;
+  const listUnit = unitPrice(1, tiers) ?? unit;
   return {
     quantity,
     unit,
     total: unit * quantity,
     wholesale: quantity >= 5,
+    listUnit,
+    savings: Math.max(0, (listUnit - unit) * quantity),
   };
 }
 
