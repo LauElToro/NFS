@@ -755,6 +755,24 @@ body:has(.store-page)::after { display: none !important; }
 .catalog-features { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.15rem 0 0.35rem; padding: 0; list-style: none; }
 .catalog-features li { font-size: 0.78rem; font-weight: 700; color: #185abc; background: rgba(66, 133, 244, 0.12); border-radius: 999px; padding: 0.2rem 0.55rem; }
 .catalog-note { margin-top: 1rem; }
+.catalog-card .poster-photo { position: relative; border-radius: 18px; overflow: hidden; background: #f7f8fb; }
+.catalog-card .poster-photo img { width: 100%; height: auto; margin: 0; display: block; object-fit: contain; border-radius: 18px; }
+.poster-wordmark {
+  position: absolute;
+  bottom: 0.55rem;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.16rem 0.62rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #1c2430;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.2;
+  box-shadow: 0 6px 16px rgba(28, 36, 48, 0.14);
+}
 .poster-mock { position: relative; height: 210px; border-radius: 18px; background: #f7f8fb; overflow: hidden; }
 .poster-face { position: relative; z-index: 1; height: calc(100% - 1.2rem); margin: 0.6rem; background: #fff; border-radius: 16px; box-shadow: 0 8px 18px rgba(28, 36, 48, 0.06); display: grid; justify-items: center; align-content: center; gap: 0.28rem; padding: 0.7rem; text-align: center; }
 .poster-face img { width: 28px; height: 28px; }

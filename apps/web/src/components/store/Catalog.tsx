@@ -9,20 +9,17 @@ import {
   type CatalogDesign,
 } from "@/lib/catalog";
 
-function PosterMock({ design }: { design: CatalogDesign }) {
+const DESIGN_IMAGES: Record<string, string> = {
+  google: "/store/design-google.jpg",
+  instagram: "/store/design-instagram.jpg",
+  whatsapp: "/store/design-whatsapp.jpg",
+};
+
+function PosterPhoto({ design }: { design: CatalogDesign }) {
   return (
-    <div className={`poster-mock poster-${design.id}`} aria-hidden="true">
-      <span className="poster-corner tl" />
-      <span className="poster-corner tr" />
-      <span className="poster-corner bl" />
-      <span className="poster-corner br" />
-      <div className="poster-face">
-        {design.id === "google" ? <img src="/reviewsgo-logo.png" alt="" /> : <span className={`poster-mark poster-mark-${design.id}`} />}
-        <strong>{design.id === "google" ? "Dejanos tu reseña" : design.id === "instagram" ? "Conocé nuestro Instagram" : "Contactanos en WhatsApp"}</strong>
-        {design.id === "google" ? <span className="poster-stars">★★★★★</span> : null}
-        <span className="poster-qr" />
-        <small>NFC</small>
-      </div>
+    <div className="poster-photo">
+      <img src={DESIGN_IMAGES[design.id]} alt={`Cartel ${design.name}`} />
+      <span className="poster-wordmark">ReviewsGO</span>
     </div>
   );
 }
@@ -48,7 +45,7 @@ export function Catalog() {
         <div className="catalog-designs">
           {DESIGNS.map((design) => (
             <article className="store-card catalog-card" key={design.id}>
-              <PosterMock design={design} />
+              <PosterPhoto design={design} />
               <h3>{design.name}</h3>
               <p>{design.description}</p>
               <ul className="catalog-features">
