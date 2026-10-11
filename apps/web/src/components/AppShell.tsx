@@ -24,6 +24,7 @@ const ICONS = {
   folder: "M3 7h6l2 2h10v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z",
   bell: "M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 19a2 2 0 0 0 4 0",
   help: "M12 18h.01M9.1 9a3 3 0 1 1 3.9 2.8c-.8.4-1 1-1 1.7V14",
+  store: "M4 9h16l-1.2 10H5.2zM8 9V7a4 4 0 0 1 8 0v2",
 };
 
 export function AppShell({
@@ -92,10 +93,12 @@ export function AppShell({
           { href: "/app/clientes", label: "Clientes y negocios", icon: ICONS.folder, match: pathname.startsWith("/app/clientes") },
           { href: "/app/resellers", label: "Revendedores", icon: ICONS.people, match: pathname.startsWith("/app/resellers") },
           { href: "/app/kpis", label: "KPIs", icon: ICONS.chart, match: pathname.startsWith("/app/kpis") },
+          { href: "/app/tienda", label: "Tienda", icon: ICONS.store, match: pathname.startsWith("/app/tienda") },
         ]
       : [
           { href: "/app", label: "Mis carteles", icon: ICONS.qr, match: pathname === "/app" },
           { href: "/app/clientes", label: "Clientes y negocios", icon: ICONS.folder, match: pathname.startsWith("/app/clientes") },
+          { href: "/app/tienda", label: "Tienda", icon: ICONS.store, match: pathname.startsWith("/app/tienda") },
         ];
 
   function search(event: FormEvent) {

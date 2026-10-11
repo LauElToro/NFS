@@ -626,7 +626,7 @@ body:has(.store-page)::after { display: none !important; }
 .store-brand img, .store-footer img { width: 36px; height: 36px; }
 .store-header nav { display: flex; gap: 1.15rem; margin-inline: auto; }
 .store-header nav a { color: #1c2430; text-decoration: none; font-weight: 650; }
-.store-header nav a:hover, .store-header nav a[aria-current="page"] { color: var(--accent); }
+.store-header nav a:hover { color: var(--accent); }
 .store-tools { display: flex; align-items: center; gap: 0.8rem; margin-left: auto; }
 .store-panel { color: #1c2430; font-weight: 700; text-decoration: none; }
 .store-cart { position: relative; color: #1c2430; text-decoration: none; display: grid; }
@@ -742,8 +742,8 @@ body:has(.store-page)::after { display: none !important; }
 }
 .home-access h2 { margin: 0 0 0.35rem; font-size: clamp(1.4rem, 2vw, 1.8rem); }
 .home-access p { margin: 0; max-width: 36rem; color: #5d6b7c; }
-.store-page { padding-bottom: 5.5rem; }
 .catalog-hero h1 { max-width: 16ch; }
+.panel-catalog .wa-float { bottom: 4.75rem; }
 .catalog-lead { margin: 0; max-width: 40rem; color: #5d6b7c; }
 .catalog-designs, .catalog-packs { display: grid; gap: 0.85rem; margin-top: 1rem; }
 .catalog-designs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
