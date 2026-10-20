@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   DESIGNS,
   FLOATING_INQUIRY,
@@ -7,6 +10,7 @@ import {
   packInquiry,
   whatsappHref,
   type CatalogDesign,
+  type CatalogPack,
 } from "@/lib/catalog";
 
 const DESIGN_IMAGES: Record<string, string> = {
@@ -21,6 +25,42 @@ function PosterPhoto({ design }: { design: CatalogDesign }) {
       <img src={DESIGN_IMAGES[design.id]} alt={`Cartel ${design.name}`} />
       <span className="poster-wordmark">ReviewsGO</span>
     </div>
+  );
+}
+
+function PackCard({ pack }: { pack: CatalogPack }) {
+  const [count, setCount] = useState(1);
+  const total = pack.total ?? pack.unitPrice * count;
+
+  return (
+    <article className={`store-card catalog-card catalog-pack${pack.wholesale ? " wholesale" : ""}${pack.featured ? " best" : ""}`}>
+      <span className={`store-badge${pack.featured || pack.wholesale ? "" : " quiet"}`}>
+        {pack.featured ? "Mejor precio mayorista" : pack.wholesale ? "Mayorista" : "Por unidad"}
+      </span>
+      {pack.discount ? <span className="pack-off">{pack.discount}</span> : null}
+      <h3>{pack.name}</h3>
+      <p className="store-total">{pack.detail}</p>
+      {pack.quantity == null ? (
+        <div className="pack-qty" role="group" aria-label="Cantidad de carteles">
+          {[1, 2, 3, 4].map((value) => (
+            <button key={value} type="button" className={value === count ? "on" : ""} aria-pressed={value === count} onClick={() => setCount(value)}>
+              x{value}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <p className="store-unit">{formatArs(total)} <small>total</small></p>
+      <p className="store-total">Precio por unidad: {formatArs(pack.unitPrice)}</p>
+      <a
+        className="btn"
+        href={whatsappHref(packInquiry(pack, pack.quantity == null ? count : undefined))}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Consultar ${pack.name} por WhatsApp`}
+      >
+        {pack.wholesale ? "Consultar este pack" : "Consultar por WhatsApp"}
+      </a>
+    </article>
   );
 }
 
@@ -72,28 +112,7 @@ export function Catalog() {
         <p className="catalog-lead">Precios en pesos argentinos. Los packs mayoristas no se combinan entre sí.</p>
         <div className="catalog-packs">
           {PACKS.map((pack) => (
-            <article className={`store-card catalog-card catalog-pack${pack.wholesale ? " wholesale" : ""}`} key={pack.id}>
-              <span className={`store-badge${pack.wholesale ? "" : " quiet"}`}>{pack.wholesale ? "Mayorista" : "Por unidad"}</span>
-              <h3>{pack.name}</h3>
-              <p className="store-total">{pack.detail}</p>
-              {pack.total == null ? (
-                <p className="store-unit">{formatArs(pack.unitPrice)} <small>por unidad</small></p>
-              ) : (
-                <>
-                  <p className="store-unit">{formatArs(pack.total)} <small>total</small></p>
-                  <p className="store-total">{formatArs(pack.unitPrice)} por unidad</p>
-                </>
-              )}
-              <a
-                className="btn"
-                href={whatsappHref(packInquiry(pack))}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Consultar ${pack.name} por WhatsApp`}
-              >
-                {pack.wholesale ? "Consultar este pack" : "Consultar por WhatsApp"}
-              </a>
-            </article>
+            <PackCard key={pack.id} pack={pack} />
           ))}
         </div>
         <p className="store-note catalog-note">Los pedidos se coordinan directamente por WhatsApp. En el sitio no hay carrito, checkout ni pago.</p>
