@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import { BrandScene } from "@/components/BrandScene";
 import "./globals.css";
 
-const body = DM_Sans({
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-display-loaded",
+});
+
+const body = Inter({
   subsets: ["latin"],
   variable: "--font-body-loaded",
 });
@@ -19,8 +24,8 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es">
-      <body className={body.variable}>
-        <style>{`:root{--font-display:var(--font-body-loaded),system-ui,sans-serif;--font-body:var(--font-body-loaded),system-ui,sans-serif}`}</style>
+      <body className={`${display.variable} ${body.variable}`}>
+        <style>{`body{--font-display:var(--font-display-loaded),system-ui,sans-serif;--font-body:var(--font-body-loaded),system-ui,sans-serif}`}</style>
         <BrandScene />
         {children}
       </body>

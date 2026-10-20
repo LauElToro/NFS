@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DESIGNS,
   FLOATING_INQUIRY,
@@ -33,7 +33,7 @@ function PackCard({ pack }: { pack: CatalogPack }) {
   const total = pack.total ?? pack.unitPrice * count;
 
   return (
-    <article className={`store-card catalog-card catalog-pack${pack.wholesale ? " wholesale" : ""}${pack.featured ? " best" : ""}`}>
+    <article className={`store-card catalog-card catalog-pack reveal${pack.wholesale ? " wholesale" : ""}${pack.featured ? " best" : ""}`}>
       <span className={`store-badge${pack.featured || pack.wholesale ? "" : " quiet"}`}>
         {pack.featured ? "Mejor precio mayorista" : pack.wholesale ? "Mayorista" : "Por unidad"}
       </span>
@@ -65,16 +65,51 @@ function PackCard({ pack }: { pack: CatalogPack }) {
 }
 
 export function Catalog() {
+  useEffect(() => {
+    const root = document.querySelector(".panel-catalog");
+    if (!root) return;
+    const nodes = root.querySelectorAll(".reveal");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      nodes.forEach((node) => node.classList.add("shown"));
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("shown");
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.08 });
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <main className="panel-catalog">
-      <section className="home-hero catalog-hero">
+      <noscript>
+        <style>{`.panel-catalog .reveal{opacity:1;transform:none}`}</style>
+      </noscript>
+      <div className="catalog-atmosphere" aria-hidden="true">
+        <span className="bubble b1" />
+        <span className="bubble b2" />
+        <span className="bubble b3" />
+        <span className="bubble b4" />
+        <span className="spark s1" />
+        <span className="spark s2" />
+      </div>
+      <section className="home-hero catalog-hero reveal">
         <div>
           <p className="store-kicker">Tienda ReviewsGO</p>
           <h1>Encontrá el cartel ideal para tu negocio</h1>
           <p>Facilitá las reseñas de Google y la conexión con tus clientes mediante carteles NFC y códigos QR.</p>
+          <div className="store-actions">
+            <a className="btn" href="#packs">Ver packs y precios</a>
+            <a className="btn secondary" href={whatsappHref(FLOATING_INQUIRY)} target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a>
+          </div>
         </div>
         <div className="home-photo">
-          <img src="/store/hero-posters.jpg" alt="Carteles ReviewsGO de Google Reviews, Instagram y WhatsApp" />
+          <img src="/store/hero-store.jpg" alt="Carteles físicos de Google Reseñas de ReviewsGO" />
         </div>
       </section>
       <div className="store-stripe" aria-hidden="true" />
@@ -84,7 +119,7 @@ export function Catalog() {
         <p className="catalog-lead">Elegí el modelo y consultanos por WhatsApp. El mismo formato sirve para sumar diseños nuevos.</p>
         <div className="catalog-designs">
           {DESIGNS.map((design) => (
-            <article className="store-card catalog-card" key={design.id}>
+            <article className="store-card catalog-card reveal" key={design.id}>
               <PosterPhoto design={design} />
               <h3>{design.name}</h3>
               <p>{design.description}</p>
