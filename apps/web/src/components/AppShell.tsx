@@ -118,7 +118,7 @@ export function AppShell({
       <button className="nav-backdrop" type="button" aria-label="Cerrar menú" onClick={() => setNavOpen(false)} />
       <aside className="sidebar">
         <Link href="/app" className="brand" aria-label="ReviewsGO">
-          <img className="brand-logo" src="/reviewsgo-logo.png" alt="" />
+          <img className="brand-logo" src="/reviewsgo-wordmark.jpg" alt="" />
           <span className="brand-name">ReviewsGO</span>
         </Link>
         <nav aria-label="Secciones">
@@ -151,7 +151,7 @@ export function AppShell({
             <Icon d="M4 7h16M4 12h16M4 17h16" />
           </button>
           <Link href="/app" className="topbar-brand" aria-label="ReviewsGO">
-            <img className="brand-logo" src="/reviewsgo-logo.png" alt="" />
+            <img className="brand-logo" src="/reviewsgo-wordmark.jpg" alt="" />
             <span>ReviewsGO</span>
           </Link>
           <form className="topbar-search" onSubmit={search} role="search">

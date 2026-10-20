@@ -11,7 +11,7 @@ export default async function LoginPage({
   return (
     <main className="auth-screen">
       <section className="auth-card card-panel stack">
-        <img className="brand-logo" src="/reviewsgo-logo.png" alt="ReviewsGO" />
+        <img className="brand-logo" src="/reviewsgo-wordmark.jpg" alt="ReviewsGO" />
         <h1 style={{ margin: 0 }}>Entrar</h1>
         <AuthForm action={loginAction} submitLabel="Entrar" next={next || undefined} />
         <p className="muted" style={{ margin: 0 }}>Si sos revendedor, entrá con el usuario que te dio el administrador.</p>

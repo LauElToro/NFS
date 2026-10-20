@@ -16,7 +16,7 @@ export function StoreFrame({
     <div className="store-page">
       <header className="store-header">
         <Link href="/" className="store-brand" aria-label="ReviewsGO">
-          <img src="/reviewsgo-logo.png" alt="" />
+          <img src="/reviewsgo-wordmark.jpg" alt="" />
           <span>ReviewsGO</span>
         </Link>
         <button className="store-menu" type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
@@ -34,7 +34,7 @@ export function StoreFrame({
       {children}
       <footer className="store-footer">
         <div>
-          <img src="/reviewsgo-logo.png" alt="" />
+          <img src="/reviewsgo-wordmark.jpg" alt="" />
           <strong>ReviewsGO</strong>
         </div>
         <p>Carteles NFC + QR para conseguir más reseñas.</p>

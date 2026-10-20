@@ -16,7 +16,7 @@ export function unconfiguredPosterHtml(code: string, posterId: string) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cartel sin configurar — ReviewsGO</title>
   <style>
-    :root { color-scheme: light; }
+    :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -24,30 +24,30 @@ export function unconfiguredPosterHtml(code: string, posterId: string) {
       display: grid;
       place-items: center;
       padding: 1.25rem;
-      background: #f6f8fb;
-      color: #1c2430;
+      background: #09090b;
+      color: #ffffff;
       font-family: "DM Sans", system-ui, sans-serif;
     }
     main {
       width: min(440px, 100%);
-      background: #fff;
-      border: 1px solid rgba(66, 133, 244, 0.16);
+      background: #141419;
+      border: 1px solid #27272a;
       border-radius: 16px;
       padding: 1.25rem;
       box-shadow: 0 8px 24px rgba(28, 36, 48, 0.06);
     }
-    img { width: 72px; height: 72px; display: block; margin: 0 auto 0.75rem; }
+    img { width: auto; height: 40px; display: block; margin: 0 auto 0.75rem; }
     h1 { margin: 0 0 0.35rem; font-size: 1.55rem; text-align: center; }
-    .lead { margin: 0 0 1rem; text-align: center; color: #5d6b7c; }
+    .lead { margin: 0 0 1rem; text-align: center; color: #a1a1aa; }
     .row { display: grid; gap: 0.2rem; margin: 0 0 0.85rem; }
-    .label { color: #5d6b7c; font-size: 0.86rem; }
+    .label { color: #a1a1aa; font-size: 0.86rem; }
     .code { font-size: 1.65rem; letter-spacing: 0.02em; }
     .status {
       display: inline-block;
       padding: 0.2rem 0.55rem;
       border-radius: 999px;
-      background: rgba(251, 188, 5, 0.28);
-      color: #7a4e00;
+      background: rgba(245, 158, 11, 0.16);
+      color: #fcd34d;
       font-weight: 700;
     }
     .actions { display: grid; gap: 0.55rem; margin-top: 1rem; }
@@ -63,13 +63,13 @@ export function unconfiguredPosterHtml(code: string, posterId: string) {
       text-decoration: none;
       cursor: pointer;
     }
-    .primary { border: 0; background: #1a73e8; color: #fff; }
-    .secondary { border: 1px solid rgba(26, 115, 232, 0.35); background: #fff; color: #1a73e8; }
+    .primary { border: 0; background: #7c3aed; color: #fff; }
+    .secondary { border: 1px solid #27272a; background: transparent; color: #fff; }
   </style>
 </head>
 <body>
   <main>
-    <img src="/reviewsgo-logo.png" alt="ReviewsGO">
+    <img src="/reviewsgo-wordmark.jpg" alt="ReviewsGO">
     <h1>ReviewsGO</h1>
     <p class="lead">Este cartel todavía no tiene un destino. El código no cambia al configurarlo.</p>
     <div class="row">
