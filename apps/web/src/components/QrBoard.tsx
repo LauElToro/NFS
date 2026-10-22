@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { OrganizeFolder } from "@/components/OrganizeFolder";
 import { CountUp, Drawer } from "@/components/ui";
 import { pngFileName, zipStore } from "@/lib/qr-zip";
 import {
@@ -470,6 +471,21 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
         ) : null}
       </div>
 
+      <div className="toolbar">
+        <button
+          className="btn secondary"
+          type="button"
+          onClick={() => setSelected((current) => [...new Set([...current, ...visible.map((item) => item.id)])])}
+        >
+          Seleccionar visibles
+        </button>
+        <button className="btn secondary" type="button" onClick={() => setSelected([])}>
+          Deseleccionar
+        </button>
+        <OrganizeFolder ids={selected} />
+        <span className="muted">{selected.length} seleccionados</span>
+      </div>
+
       <div className="stack">
         {visible.length === 0 ? <p className="muted">No hay carteles para mostrar.</p> : null}
         {visible.map((item) => {
@@ -477,11 +493,23 @@ export function QrBoard({ ownerId }: { ownerId?: string }) {
           const slug = publicSlug(item);
           const editing = openId === item.id;
           return (
-            <article key={item.id} className="card-panel" style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+            <article key={item.id} className={`card-panel${selected.includes(item.id) ? " picked" : ""}`} style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
               <QrPreview id={slug} />
               <div className="stack" style={{ flex: "1 1 240px" }}>
                 <div>
-                  <strong>{item.cartelId || item.id}</strong>
+                  <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(item.id)}
+                      aria-label={`Seleccionar ${item.cartelId || item.id}`}
+                      onChange={(event) =>
+                        setSelected((current) =>
+                          event.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id),
+                        )
+                      }
+                    />
+                    <strong>{item.cartelId || item.id}</strong>
+                  </label>
                   <p className="muted" style={{ margin: "0.25rem 0 0" }}>
                     {code} · {STATUS_LABELS[item.status || "disponible"]}
                     {item.ownerName ? ` · ${item.ownerName}` : ""}
@@ -829,6 +857,7 @@ function AdminInventory({
         <button className="btn secondary" type="button" onClick={() => setSelected([])}>
           Deseleccionar todos
         </button>
+        <OrganizeFolder ids={selected} />
         <button
           className="btn"
           type="button"
@@ -884,7 +913,7 @@ function AdminInventory({
           const slug = publicSlug(item);
           const editing = openId === item.id;
           return (
-            <article key={item.id} className="card-panel interactive qr-card stack" style={{ margin: 0 }}>
+            <article key={item.id} className={`card-panel interactive qr-card stack${selected.includes(item.id) ? " picked" : ""}`} style={{ margin: 0 }}>
               <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                 <input
                   type="checkbox"

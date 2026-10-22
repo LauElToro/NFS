@@ -895,3 +895,28 @@ body:has(.store-page)::after { display: none !important; }
     scroll-behavior: auto !important;
   }
 }
+
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+.folder-card { border-color: rgba(139, 92, 246, 0.35); }
+.folder-heading { display: flex; gap: 0.65rem; align-items: center; }
+.folder-heading h2 { margin: 0; font-size: 1.05rem; }
+.folder-icon {
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.16);
+  color: #c4b5fd;
+  flex: none;
+}
+.card-panel.picked,
+.qr-card.picked { border-color: rgba(168, 85, 247, 0.75); box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.35); }
+.modal-root { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 1rem; }
+.modal-card { position: relative; z-index: 1; width: min(520px, 100%); max-height: min(80vh, 720px); overflow: auto; }
+.picker-list { display: grid; gap: 0.35rem; max-height: 320px; overflow: auto; }
+.picker-row { display: flex; gap: 0.55rem; align-items: flex-start; padding: 0.45rem 0; border-bottom: 1px solid var(--line); }
