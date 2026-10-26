@@ -70,6 +70,7 @@ function persistable(item: QrItem): QrItem {
     clientId: item.clientId,
     clientMoves: item.clientMoves || [],
     lastCheck: item.lastCheck,
+    channel: item.channel === "activacion" ? "activacion" : undefined,
   };
 }
 
@@ -128,12 +129,45 @@ export async function createStock(count: number): Promise<QrItem[]> {
   return created;
 }
 
+export async function createActivationPosters(count: number): Promise<QrItem[]> {
+  const amount = Math.min(100, Math.max(1, Math.floor(count)));
+  const items = await readCatalog();
+  const created: QrItem[] = [];
+  const now = new Date().toISOString();
+  const taken = new Set(items.map((item) => item.id));
+  for (let index = 0; index < amount; index += 1) {
+    let code = posterCode();
+    while (taken.has(code)) code = posterCode();
+    taken.add(code);
+    created.push(persistable({
+      id: code,
+      uniqueCode: code,
+      token: randomUUID(),
+      cartelId: nextCartelId([...items, ...created]),
+      title: "",
+      url: "",
+      ownerId: ADMIN_USER_ID,
+      destinationType: "otro",
+      status: "vendido",
+      active: true,
+      channel: "activacion",
+      history: [],
+      createdAt: now,
+      updatedAt: now,
+      soldAt: now,
+    }));
+  }
+  await writeCatalog([...created, ...items]);
+  return created;
+}
+
 export async function assignPosters(ids: string[], resellerId: string): Promise<QrItem[]> {
   const items = await readCatalog();
   const wanted = new Set(ids);
   const now = new Date().toISOString();
   const next = items.map((item) => {
     if (!wanted.has(item.id)) return item;
+    if (item.channel === "activacion") return item;
     if (item.status === "bloqueado") return item;
     if (item.status && item.status !== "disponible") return item;
     return persistable({

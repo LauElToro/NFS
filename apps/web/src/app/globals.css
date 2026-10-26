@@ -885,7 +885,8 @@ body:has(.store-page)::after { display: none !important; }
 }
 
 @media print {
-  .scene, body::before, body::after { display: none !important; }
+  .scene, body::before, body::after, .sidebar, .topbar, .fab-stack, .no-print { display: none !important; }
+  .shell, .shell-main { display: block; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -920,3 +921,9 @@ body:has(.store-page)::after { display: none !important; }
 .modal-card { position: relative; z-index: 1; width: min(520px, 100%); max-height: min(80vh, 720px); overflow: auto; }
 .picker-list { display: grid; gap: 0.35rem; max-height: 320px; overflow: auto; }
 .picker-row { display: flex; gap: 0.55rem; align-items: flex-start; padding: 0.45rem 0; border-bottom: 1px solid var(--line); }
+.activate-card { width: min(560px, 100%); }
+.activation-code { font-size: 1.05rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.activation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+.activation-ticket { display: grid; gap: 0.25rem; border: 1px dashed rgba(139, 92, 246, 0.55); border-radius: 16px; padding: 0.8rem; background: #fff; color: #111; }
+.activation-ticket b { font-size: 1.05rem; letter-spacing: 0.03em; }
+.activation-ticket small { word-break: break-all; }

@@ -95,6 +95,7 @@ export type QrItem = {
   clientId?: string;
   clientMoves?: ClientMove[];
   lastCheck?: PosterCheck;
+  channel?: "activacion";
 };
 
 const KEY = "nfs-qrs";

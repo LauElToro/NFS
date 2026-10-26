@@ -6,9 +6,23 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
-export function unconfiguredPosterHtml(code: string, posterId: string) {
+export function unconfiguredPosterHtml(code: string, posterId: string, kind: "panel" | "compra" | "cerrado" | "listo" = "panel") {
   const safeCode = escapeHtml(code);
   const configureHref = escapeHtml(`/app/configurar/${encodeURIComponent(posterId)}`);
+  const lead =
+    kind === "compra"
+      ? "Este cartel todavía no está activado. Ingresá el código que vino en el paquete para elegir a dónde van tus clientes."
+      : kind === "cerrado"
+        ? "Este código de activación ya no está disponible."
+        : kind === "listo"
+          ? "Este cartel ya fue activado. Si guardaste el enlace de administración, usalo para cambiar el destino."
+          : "Este cartel todavía no tiene un destino. El código no cambia al configurarlo.";
+  const primary =
+    kind === "compra"
+      ? `<a class="primary" href="/activar">Activar mi cartel</a>`
+      : kind === "panel"
+        ? `<a class="primary" href="${configureHref}">Configurar este cartel</a>`
+        : "";
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -71,7 +85,7 @@ export function unconfiguredPosterHtml(code: string, posterId: string) {
   <main>
     <img src="/reviewsgo-wordmark.jpg" alt="ReviewsGO">
     <h1>ReviewsGO</h1>
-    <p class="lead">Este cartel todavía no tiene un destino. El código no cambia al configurarlo.</p>
+    <p class="lead">${lead}</p>
     <div class="row">
       <span class="label">Código del QR</span>
       <strong class="code" id="code">${safeCode}</strong>
@@ -81,9 +95,9 @@ export function unconfiguredPosterHtml(code: string, posterId: string) {
       <span class="status">Sin configurar</span>
     </div>
     <div class="actions">
-      <a class="primary" href="${configureHref}">Configurar este cartel</a>
+      ${primary}
       <button class="secondary" type="button" id="copy">Copiar código</button>
-      <a class="secondary" href="/app">Volver al panel</a>
+      ${kind === "panel" ? `<a class="secondary" href="/app">Volver al panel</a>` : ""}
     </div>
   </main>
   <script>

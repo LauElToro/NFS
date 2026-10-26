@@ -118,7 +118,7 @@ export async function updateClient(
 }
 
 function eligible(item: QrItem, account: Pick<Account, "id" | "role">) {
-  if (item.clientId || item.active === false || item.status === "bloqueado") return false;
+  if (item.channel === "activacion" || item.clientId || item.active === false || item.status === "bloqueado") return false;
   if (account.role === "admin") return item.status === "disponible";
   return item.ownerId === account.id;
 }
