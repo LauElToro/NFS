@@ -16,7 +16,7 @@ const body = Inter({
 export const metadata: Metadata = {
   title: "ReviewsGO — Carteles de reseñas con QR",
   description:
-    "Gestioná carteles de reseñas con QR y NFC. El impreso no cambia cuando actualizás el destino.",
+    "Carteles inteligentes con NFC y código QR para que tus clientes lleguen a tus reseñas, redes y contacto.",
 };
 
 export default function RootLayout({
