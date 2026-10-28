@@ -1,10 +1,8 @@
 # ReviewsGO
 
-QRs en `data/qrs.json`. El dominio de Netlify redirige `/r/<slug>` al destino de cada QR.
+Carteles NFC + QR. La URL impresa, `/r/<identificador>`, no cambia cuando se configura el destino.
 
-## Destinos
-
-Editá `data/qrs.json` (`title` y `url`) y volvé a desplegar. El build genera `apps/web/public/_redirects`: `/r/<titulo-en-slug>` responde 302 hacia esa URL.
+Las cuentas, los carteles, las carpetas y las activaciones se guardan en Netlify Blobs. El administrador entra al panel. Quien compra por Mercado Libre activa su cartel en `/activar` con el código que viene en el paquete.
 
 ## Local
 
@@ -13,14 +11,11 @@ pnpm install
 pnpm dev
 ```
 
-App: http://localhost:3000  
-Redirect de prueba: http://localhost:3000/r/menu-terraza
+App: http://localhost:3000
 
 ## Netlify
 
-El sitio usa `netlify.toml` (plugin de Next.js). Conectá el repo y publicá. El dominio queda como base de los QR: `https://<tu-dominio>/r/<slug>`.
-
-Variable recomendada: `AUTH_SECRET`.
+El sitio usa `netlify.toml`. Variable requerida: `AUTH_SECRET`.
 
 ## Tests
 

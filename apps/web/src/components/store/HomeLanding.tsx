@@ -43,7 +43,7 @@ export function HomeLanding({ loggedIn }: { loggedIn: boolean }) {
               Conectá a tus clientes con tus reseñas de Google, redes sociales y canales de contacto con una experiencia rápida, simple y profesional.
             </p>
             <div className="store-actions">
-              <Link className="btn" href={accountHref}>Acceder a mi cuenta</Link>
+              <Link className="btn" href={accountHref}>{loggedIn ? "Ir al panel" : "Acceder a mi cuenta"}</Link>
             </div>
           </div>
           <div className="home-photo">
@@ -65,7 +65,7 @@ export function HomeLanding({ loggedIn }: { loggedIn: boolean }) {
             <h2>Empezá a gestionar tu presencia digital.</h2>
             <p>Accedé a tu cuenta de ReviewsGO para administrar tus recursos y gestionar tu negocio.</p>
           </div>
-          <Link className="btn" href={accountHref}>Iniciar sesión</Link>
+          <Link className="btn" href={accountHref}>{loggedIn ? "Ir al panel" : "Iniciar sesión"}</Link>
         </section>
       </main>
     </StoreFrame>

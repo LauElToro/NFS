@@ -93,7 +93,7 @@ export default function ResellersPage() {
           </label>
           <label className="label">
             Contraseña
-            <input className="input" type="text" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+            <input className="input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
           </label>
         </div>
         <button className="btn" type="submit" disabled={creating} aria-busy={creating}>

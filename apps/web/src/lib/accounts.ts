@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { BcryptPasswordHasher } from "@nfs/infrastructure";
 import seedUsers from "../../../../data/users.json";
 import { readStored, writeStored } from "./blob-store";
@@ -18,16 +18,7 @@ export type Account = {
 
 export type PublicAccount = Omit<Account, "passwordHash">;
 
-export type PackCode = {
-  code: string;
-  credits: number;
-  createdAt: string;
-  redeemedBy: string | null;
-  redeemedAt: string | null;
-};
-
 const USERS_KEY = "users";
-const PACKS_KEY = "pack-codes";
 const ADMIN_EMAIL = "admin@nfs.com";
 const hasher = new BcryptPasswordHasher();
 
@@ -131,51 +122,3 @@ export async function updateReseller(
   return next;
 }
 
-export async function changeCredits(id: string, delta: number) {
-  const accounts = await readAccounts();
-  const current = accounts.find((account) => account.id === id);
-  if (!current) throw new Error("Usuario no encontrado");
-  if (current.role === "admin") return current;
-  const credits = current.credits + delta;
-  if (credits < 0) throw new Error("No hay créditos disponibles. Tenés que adquirir un nuevo pack.");
-  const next = { ...current, credits };
-  await writeAccounts(accounts.map((account) => (account.id === id ? next : account)));
-  return next;
-}
-
-export async function readPacks(): Promise<PackCode[]> {
-  return readStored<PackCode[]>(PACKS_KEY, []);
-}
-
-export async function createPack(credits: number) {
-  const amount = Math.floor(credits);
-  if (![10, 20, 30, 40, 50, 60, 70, 80, 90, 100].includes(amount)) {
-    throw new Error("El pack tiene que ser de 10, 20, 30, 40, 50, 60, 70, 80, 90 o 100 créditos");
-  }
-  const chunk = () => randomBytes(3).toString("hex").slice(0, 4).toUpperCase();
-  const code = `NFS${amount}-${chunk()}-${chunk()}`;
-  const packs = await readPacks();
-  const pack: PackCode = {
-    code,
-    credits: amount,
-    createdAt: new Date().toISOString(),
-    redeemedBy: null,
-    redeemedAt: null,
-  };
-  await writeStored(PACKS_KEY, [pack, ...packs]);
-  return pack;
-}
-
-export async function redeemPack(accountId: string, rawCode: string) {
-  const code = rawCode.trim().toUpperCase();
-  const packs = await readPacks();
-  const pack = packs.find((item) => item.code === code);
-  if (!pack) throw new Error("Código inválido");
-  if (pack.redeemedBy) throw new Error("Ese código ya fue usado");
-  const account = await changeCredits(accountId, pack.credits);
-  const used = packs.map((item) =>
-    item.code === code ? { ...item, redeemedBy: accountId, redeemedAt: new Date().toISOString() } : item,
-  );
-  await writeStored(PACKS_KEY, used);
-  return { account, pack };
-}
