@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   DESIGNS,
   FLOATING_INQUIRY,
   PACKS,
+  PACK_BADGES,
   designInquiry,
   formatArs,
+  listTotal,
+  packDiscountPercent,
   packInquiry,
   whatsappHref,
   type CatalogDesign,
@@ -29,36 +32,28 @@ function PosterPhoto({ design }: { design: CatalogDesign }) {
 }
 
 function PackCard({ pack }: { pack: CatalogPack }) {
-  const [count, setCount] = useState(1);
-  const total = pack.total ?? pack.unitPrice * count;
+  const percent = packDiscountPercent(pack);
+  const compared = listTotal(pack);
 
   return (
-    <article className={`store-card catalog-card catalog-pack reveal${pack.wholesale ? " wholesale" : ""}${pack.featured ? " best" : ""}`}>
-      <span className={`store-badge${pack.featured || pack.wholesale ? "" : " quiet"}`}>
-        {pack.featured ? "Mejor precio mayorista" : pack.wholesale ? "Mayorista" : "Por unidad"}
+    <article className={`store-card catalog-card catalog-pack reveal${pack.wholesale ? " wholesale" : ""}${pack.badge === "descuento" ? " best" : ""}`}>
+      <span className={`store-badge${pack.badge || pack.wholesale ? "" : " quiet"}`}>
+        {pack.badge ? PACK_BADGES[pack.badge] : pack.wholesale ? "Mayorista" : "Minorista"}
       </span>
-      {pack.discount ? <span className="pack-off">{pack.discount}</span> : null}
+      {percent > 0 ? <span className="pack-off">{percent}% OFF</span> : null}
       <h3>{pack.name}</h3>
       <p className="store-total">{pack.detail}</p>
-      {pack.quantity == null ? (
-        <div className="pack-qty" role="group" aria-label="Cantidad de carteles">
-          {[1, 2, 3, 4].map((value) => (
-            <button key={value} type="button" className={value === count ? "on" : ""} aria-pressed={value === count} onClick={() => setCount(value)}>
-              x{value}
-            </button>
-          ))}
-        </div>
-      ) : null}
-      <p className="store-unit">{formatArs(total)} <small>total</small></p>
+      {percent > 0 ? <p className="store-total"><s>{formatArs(compared)}</s></p> : null}
+      <p className="store-unit">{formatArs(pack.total)} <small>total</small></p>
       <p className="store-total">Precio por unidad: {formatArs(pack.unitPrice)}</p>
       <a
         className="btn"
-        href={whatsappHref(packInquiry(pack, pack.quantity == null ? count : undefined))}
+        href={whatsappHref(packInquiry(pack))}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Consultar ${pack.name} por WhatsApp`}
       >
-        {pack.wholesale ? "Consultar este pack" : "Consultar por WhatsApp"}
+        Consultar por WhatsApp
       </a>
     </article>
   );

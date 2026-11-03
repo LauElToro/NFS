@@ -10,16 +10,25 @@ export type CatalogDesign = {
   features: string[];
 };
 
+export type PackBadge = "elegido" | "descuento" | "revendedores";
+
 export type CatalogPack = {
   id: string;
   name: string;
   detail: string;
-  quantity: number | null;
+  quantity: number;
   unitPrice: number;
-  total: number | null;
+  total: number;
   wholesale: boolean;
-  discount: string | null;
-  featured?: boolean;
+  badge?: PackBadge;
+};
+
+export const LIST_UNIT_PRICE = 25000;
+
+export const PACK_BADGES: Record<PackBadge, string> = {
+  elegido: "Más elegido",
+  descuento: "Mayor descuento",
+  revendedores: "Ideal para revendedores",
 };
 
 export const DESIGNS: CatalogDesign[] = [
@@ -44,22 +53,14 @@ export const DESIGNS: CatalogDesign[] = [
 ];
 
 export const PACKS: CatalogPack[] = [
-  {
-    id: "retail",
-    name: "Pack x1 a x4",
-    detail: "De 1 a 4 carteles",
-    quantity: null,
-    unitPrice: 25000,
-    total: null,
-    wholesale: false,
-    discount: null,
-  },
-  { id: "x5", name: "Pack x5", detail: "5 carteles", quantity: 5, unitPrice: 23000, total: 115000, wholesale: true, discount: "8% OFF aprox." },
-  { id: "x10", name: "Pack x10", detail: "10 carteles", quantity: 10, unitPrice: 20000, total: 200000, wholesale: true, discount: "20% OFF" },
-  { id: "x25", name: "Pack x25", detail: "25 carteles", quantity: 25, unitPrice: 15000, total: 375000, wholesale: true, discount: "40% OFF" },
-  { id: "x50", name: "Pack x50", detail: "50 carteles", quantity: 50, unitPrice: 12000, total: 600000, wholesale: true, discount: "52% OFF" },
-  { id: "x75", name: "Pack x75", detail: "75 carteles", quantity: 75, unitPrice: 11000, total: 825000, wholesale: true, discount: "56% OFF" },
-  { id: "x100", name: "Pack x100", detail: "100 carteles", quantity: 100, unitPrice: 10000, total: 1000000, wholesale: true, discount: "60% OFF", featured: true },
+  { id: "retail", name: "Compra individual", detail: "1 cartel", quantity: 1, unitPrice: 25000, total: 25000, wholesale: false },
+  { id: "x3", name: "Pack x3", detail: "3 carteles", quantity: 3, unitPrice: 20000, total: 60000, wholesale: false },
+  { id: "x5", name: "Pack x5", detail: "5 carteles", quantity: 5, unitPrice: 17000, total: 85000, wholesale: true },
+  { id: "x10", name: "Pack x10", detail: "10 carteles", quantity: 10, unitPrice: 15000, total: 150000, wholesale: true, badge: "elegido" },
+  { id: "x25", name: "Pack x25", detail: "25 carteles", quantity: 25, unitPrice: 13000, total: 325000, wholesale: true },
+  { id: "x50", name: "Pack x50", detail: "50 carteles", quantity: 50, unitPrice: 11500, total: 575000, wholesale: true, badge: "revendedores" },
+  { id: "x75", name: "Pack x75", detail: "75 carteles", quantity: 75, unitPrice: 11000, total: 825000, wholesale: true },
+  { id: "x100", name: "Pack x100", detail: "100 carteles", quantity: 100, unitPrice: 10000, total: 1000000, wholesale: true, badge: "descuento" },
 ];
 
 export function formatArs(amount: number) {
@@ -74,12 +75,23 @@ export function designInquiry(design: CatalogDesign) {
   return `Hola, ReviewsGO. Quiero consultar por el modelo ${design.name}. ¿Me pasan más información para realizar el pedido?`;
 }
 
+export function listTotal(pack: CatalogPack) {
+  return LIST_UNIT_PRICE * pack.quantity;
+}
+
+export function packSavings(pack: CatalogPack) {
+  return Math.max(0, listTotal(pack) - pack.total);
+}
+
+export function packDiscountPercent(pack: CatalogPack) {
+  const list = listTotal(pack);
+  if (list <= 0 || pack.total >= list) return 0;
+  return Math.round(((list - pack.total) / list) * 100);
+}
+
 export function packInquiry(pack: CatalogPack, units?: number) {
   const quantity = pack.quantity ?? units ?? 1;
   const total = pack.total ?? pack.unitPrice * quantity;
-  if (pack.quantity == null) {
-    const label = quantity === 1 ? "cartel" : "carteles";
-    return `Hola, ReviewsGO. Quiero consultar por ${quantity} ${label}. Precio publicado: ${formatArs(total)} total, ${formatArs(pack.unitPrice)} por unidad. ¿Me pasan más información para realizar el pedido?`;
-  }
-  return `Hola, ReviewsGO. Quiero consultar por el pack de ${quantity} carteles. Precio publicado: ${formatArs(total)} total, ${formatArs(pack.unitPrice)} por unidad. ¿Me pasan más información para realizar el pedido?`;
+  const label = quantity === 1 ? "cartel" : "carteles";
+  return `Hola, ReviewsGO. Quiero consultar por ${quantity} ${label}. Precio publicado: ${formatArs(total)} total, ${formatArs(pack.unitPrice)} por unidad. ¿Me pasan más información para realizar el pedido?`;
 }

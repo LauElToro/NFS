@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   DESIGNS,
   FLOATING_INQUIRY,
   PACKS,
+  PACK_BADGES,
   designInquiry,
   formatArs,
+  listTotal,
+  packDiscountPercent,
   packInquiry,
+  packSavings,
   whatsappHref,
   type CatalogDesign,
   type CatalogPack,
@@ -31,29 +35,22 @@ const STEPS = [
 const retail = PACKS.find((pack) => pack.id === "retail") ?? PACKS[0];
 
 function PackOffer({ pack }: { pack: CatalogPack }) {
-  const [count, setCount] = useState(1);
-  const total = pack.total ?? pack.unitPrice * count;
+  const compared = listTotal(pack);
+  const percent = packDiscountPercent(pack);
+  const savings = packSavings(pack);
+  const tone = pack.badge === "descuento" || percent >= 54 ? " featured" : pack.badge === "elegido" ? " chosen" : "";
 
   return (
-    <article className={`offer-card reveal${pack.featured ? " featured" : ""}`}>
-      <span className="offer-tag">{pack.featured ? "Mayor volumen" : pack.wholesale ? "Mayorista" : "Individual"}</span>
-      {pack.discount ? <span className="offer-off">{pack.discount}</span> : null}
+    <article className={`offer-card reveal${tone}`}>
+      <span className="offer-tag">{pack.badge ? PACK_BADGES[pack.badge] : pack.wholesale ? "Mayorista" : "Minorista"}</span>
+      {percent > 0 ? <span className="offer-off">{percent}% OFF</span> : null}
       <h3>{pack.name}</h3>
-      <p>{pack.detail}</p>
-      {pack.quantity == null ? (
-        <div className="pack-qty" role="group" aria-label="Cantidad de carteles">
-          {[1, 2, 3, 4].map((value) => (
-            <button key={value} type="button" className={value === count ? "on" : ""} aria-pressed={value === count} onClick={() => setCount(value)}>
-              x{value}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <p className="offer-qty">{pack.quantity} carteles</p>
-      )}
-      <p className="offer-price">{formatArs(total)} <small>total</small></p>
+      <p className="offer-qty">{pack.detail}</p>
+      {percent > 0 ? <p className="offer-was"><s>{formatArs(compared)}</s></p> : null}
+      <p className="offer-price">{formatArs(pack.total)} <small>total</small></p>
       <p className="offer-unit">Precio unitario: {formatArs(pack.unitPrice)}</p>
-      <a className="btn" href={whatsappHref(packInquiry(pack, pack.quantity == null ? count : undefined))} target="_blank" rel="noopener noreferrer">
+      {savings > 0 ? <p className="offer-save">Ahorrás {formatArs(savings)}</p> : null}
+      <a className="btn" href={whatsappHref(packInquiry(pack))} target="_blank" rel="noopener noreferrer">
         Consultar
       </a>
     </article>
@@ -141,13 +138,27 @@ export function HomeLanding({ loggedIn }: { loggedIn: boolean }) {
 
         <section className="market-section band" id="packs" aria-labelledby="packs-titulo">
           <div className="section-intro reveal">
-            <h2 id="packs-titulo">Packs y precios</h2>
-            <p>Precios en pesos argentinos, tomados de la lista publicada. Los packs mayoristas no se combinan entre sí.</p>
+            <h2 id="packs-titulo">Precios minoristas y mayoristas</h2>
+            <p className="pack-slogan">Cuantos más carteles comprás, menos pagás por unidad.</p>
+            <p>Elegí tu pack ideal y comenzá a potenciar las reseñas de tu negocio con ReviewsGO.</p>
           </div>
-          <div className="pack-grid">
-            {PACKS.map((pack) => (
-              <PackOffer key={pack.id} pack={pack} />
-            ))}
+          <div className="pack-groups">
+            <div>
+              <h3>Minorista</h3>
+              <div className="pack-grid compact">
+                {PACKS.filter((pack) => !pack.wholesale).map((pack) => (
+                  <PackOffer key={pack.id} pack={pack} />
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3>Mayorista</h3>
+              <div className="pack-grid">
+                {PACKS.filter((pack) => pack.wholesale).map((pack) => (
+                  <PackOffer key={pack.id} pack={pack} />
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
