@@ -20,8 +20,8 @@ import { StoreFrame } from "./StoreFrame";
 
 const PHOTOS: Record<string, string> = {
   google: "/store/design-google.jpg",
-  instagram: "/store/design-instagram.jpg",
-  whatsapp: "/store/design-whatsapp.jpg",
+  instagram: "/store/design-instagram.png",
+  whatsapp: "/store/design-whatsapp.png",
 };
 
 const FACTS = ["NFC y código QR", "PVC de 3 mm", "10 × 15 cm", "Soporte para superficie"];

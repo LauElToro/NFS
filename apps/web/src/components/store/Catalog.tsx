@@ -18,15 +18,15 @@ import {
 
 const DESIGN_IMAGES: Record<string, string> = {
   google: "/store/design-google.jpg",
-  instagram: "/store/design-instagram.jpg",
-  whatsapp: "/store/design-whatsapp.jpg",
+  instagram: "/store/design-instagram.png",
+  whatsapp: "/store/design-whatsapp.png",
 };
 
 function PosterPhoto({ design }: { design: CatalogDesign }) {
   return (
     <div className="poster-photo">
       <img src={DESIGN_IMAGES[design.id]} alt={`Cartel ${design.name}`} />
-      <span className="poster-wordmark">ReviewsGO</span>
+      {design.id === "google" ? <span className="poster-wordmark">ReviewsGO</span> : null}
     </div>
   );
 }
