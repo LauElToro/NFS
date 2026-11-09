@@ -120,7 +120,27 @@ export function HomeLanding({ loggedIn }: { loggedIn: boolean }) {
             </ul>
           </div>
           <div className="hero-visual reveal">
-            <img src="/store/hero-posters.jpg" alt="Carteles físicos ReviewsGO de Google, Instagram y WhatsApp con QR y NFC" />
+            <div className="hero-stage">
+              <p className="hero-stage-kicker">Presentación interactiva</p>
+              <h2>Explorá los carteles NFC + QR</h2>
+              <p>Abrí la presentación para recorrer las variantes de ReviewsGO y ver cómo el cliente pasa del cartel a la reseña.</p>
+              <ul className="hero-stage-points">
+                <li>Google, Instagram y WhatsApp</li>
+                <li>Demos de NFC y QR</li>
+              </ul>
+              <a
+                className="btn hero-play"
+                href="https://claude.ai/artifact/8oX7QZANmh4rDWudkEG6wE"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 7.5v9l8-4.5-8-4.5z" />
+                </svg>
+                Iniciar presentación
+              </a>
+              <p className="hero-stage-note">Se abre en una pestaña nueva. ReviewsGO queda abierto en esta.</p>
+            </div>
           </div>
         </section>
 
