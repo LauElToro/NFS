@@ -986,6 +986,47 @@ body:has(.auth-screen)::after { display: none !important; }
 .hero-play { justify-self: start; gap: 0.55rem; }
 .hero-play svg { width: 1.15rem; height: 1.15rem; fill: currentColor; }
 .hero-stage-note { color: var(--muted); font-size: 0.8rem; }
+.show-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  background: #050308;
+  animation: show-in 0.45s cubic-bezier(.16, 1, .3, 1);
+}
+.show-layer iframe {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #050308;
+}
+.show-close {
+  grid-area: 1 / 1;
+  justify-self: end;
+  align-self: start;
+  z-index: 2;
+  margin: calc(12px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 0 0;
+  border: 1px solid rgba(196, 181, 253, 0.45);
+  border-radius: 999px;
+  background: rgba(20, 14, 34, 0.82);
+  color: #f3efff;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+.show-close:hover { border-color: #c4b5fd; background: rgba(139, 92, 246, 0.35); }
+.show-close:focus-visible { outline: 2px solid #c4b5fd; outline-offset: 3px; }
+@keyframes show-in {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .show-layer { animation: none; }
+}
 .market-section { padding: 4.2rem 0; }
 .market-section.band { background: #101116; width: 100%; max-width: none; padding-inline: max(1rem, calc((100% - 1120px) / 2)); }
 .section-intro { max-width: 40rem; margin-bottom: 1.4rem; }

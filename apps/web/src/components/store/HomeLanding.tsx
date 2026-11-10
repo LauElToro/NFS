@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DESIGNS,
   FLOATING_INQUIRY,
@@ -79,6 +79,37 @@ function ProductCard({ design }: { design: CatalogDesign }) {
 }
 
 export function HomeLanding({ loggedIn }: { loggedIn: boolean }) {
+  const [presentation, setPresentation] = useState(false);
+  const playRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!presentation) return;
+    const page = document.querySelector(".store-page");
+    const blocked = page ? [...page.children].filter((node) => !node.classList.contains("show-layer")) : [];
+    blocked.forEach((node) => node.setAttribute("inert", ""));
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPresentation(false);
+    };
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as { source?: string; type?: string } | null;
+      if (data?.source === "reviewsgo-presentacion" && data.type === "close") setPresentation(false);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("message", onMessage);
+    return () => {
+      blocked.forEach((node) => node.removeAttribute("inert"));
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("message", onMessage);
+      playRef.current?.focus();
+    };
+  }, [presentation]);
+
   useEffect(() => {
     const nodes = document.querySelectorAll(".market .reveal");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -128,18 +159,13 @@ export function HomeLanding({ loggedIn }: { loggedIn: boolean }) {
                 <li>Google, Instagram y WhatsApp</li>
                 <li>Demos de NFC y QR</li>
               </ul>
-              <a
-                className="btn hero-play"
-                href="https://claude.ai/artifact/8oX7QZANmh4rDWudkEG6wE"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <button ref={playRef} className="btn hero-play" type="button" onClick={() => setPresentation(true)}>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M9 7.5v9l8-4.5-8-4.5z" />
                 </svg>
                 Iniciar presentación
-              </a>
-              <p className="hero-stage-note">Se abre en una pestaña nueva. ReviewsGO queda abierto en esta.</p>
+              </button>
+              <p className="hero-stage-note">Se abre en esta misma página.</p>
             </div>
           </div>
         </section>
@@ -216,6 +242,14 @@ export function HomeLanding({ loggedIn }: { loggedIn: boolean }) {
           </div>
         </section>
       </main>
+      {presentation ? (
+        <div className="show-layer" role="dialog" aria-modal="true" aria-label="Presentación interactiva de carteles NFC y QR">
+          <iframe title="Presentación interactiva de los carteles NFC y QR" src="/presentacion/index.html" />
+          <button ref={closeRef} className="show-close" type="button" onClick={() => setPresentation(false)}>
+            Cerrar
+          </button>
+        </div>
+      ) : null}
       <a className="wa-float" href={whatsappHref(FLOATING_INQUIRY)} target="_blank" rel="noopener noreferrer" aria-label="¿Tenés alguna consulta?" title="¿Tenés alguna consulta?">
         <span className="wa-tip">¿Tenés alguna consulta?</span>
         <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
